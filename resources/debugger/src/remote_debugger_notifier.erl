@@ -4,7 +4,7 @@
 -include("remote_debugger_messages.hrl").
 -include("trace_utils.hrl").
 
--export([run/1, breakpoint_reached/1]).
+-export([run/1, breakpoint_reached/1, snapshot_with_stacks/0]).
 
 run(Debugger) ->
   register(?RDEBUG_NOTIFIER, self()),
@@ -26,7 +26,7 @@ breakpoint_reached(Pid) ->
   ?RDEBUG_NOTIFIER ! #breakpoint_reached{pid = Pid, snapshot = snapshot_with_stacks()}.
 
 snapshot_with_stacks() ->
-  [{Pid, Init, Status, Info, get_stack(Pid, Status)} || {Pid, Init, Status, Info} <- int:snapshot()].
+  [{Pid, Init, Status, Info, get_stack(Pid, Status)} || {Pid, Init, Status, Info} <- int:snapshot(), Status == break].
 
 get_stack(Pid, break) ->
   do_get_stackframes(Pid);

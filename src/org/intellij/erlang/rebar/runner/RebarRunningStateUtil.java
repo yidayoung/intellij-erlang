@@ -43,6 +43,7 @@ import java.util.List;
 
 public class RebarRunningStateUtil {
   private static final String REBAR = "rebar3";
+  private static final String REBAR2 = "rebar";
 
   private RebarRunningStateUtil() {
   }
@@ -105,6 +106,10 @@ public class RebarRunningStateUtil {
   public static String getRebarPath(@Nullable String directory) {
     if (directory != null) {
       File rebar = new File(directory, REBAR);
+      if (rebar.exists() && rebar.canExecute()) {
+        return rebar.getPath();
+      }
+      rebar = new File(directory, REBAR2);
       if (rebar.exists() && rebar.canExecute()) {
         return rebar.getPath();
       }

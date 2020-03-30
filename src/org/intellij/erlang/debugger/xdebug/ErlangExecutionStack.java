@@ -58,4 +58,9 @@ public class ErlangExecutionStack extends XExecutionStack {
       container.addStackFrames(myStack, true);
     }
   }
+
+  public ErlangProcessSnapshot getSnapshot(){
+    return myProcessSnapshot;
+  }
+
 }

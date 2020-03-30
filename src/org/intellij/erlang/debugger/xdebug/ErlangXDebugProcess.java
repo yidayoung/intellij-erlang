@@ -24,6 +24,7 @@ import com.intellij.execution.process.OSProcessHandler;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.ConsoleView;
+import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.ui.ExecutionConsole;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.editor.Document;
@@ -39,17 +40,17 @@ import com.intellij.testFramework.LightVirtualFile;
 import com.intellij.util.PathUtil;
 import com.intellij.util.ResourceUtil;
 import com.intellij.util.containers.ContainerUtil;
+import com.intellij.util.io.BaseOutputReader;
 import com.intellij.util.io.URLUtil;
-import com.intellij.xdebugger.XDebugProcess;
-import com.intellij.xdebugger.XDebugSession;
-import com.intellij.xdebugger.XExpression;
-import com.intellij.xdebugger.XSourcePosition;
+import com.intellij.xdebugger.*;
 import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
 import com.intellij.xdebugger.evaluation.EvaluationMode;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
+import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XSuspendContext;
+import com.intellij.xdebugger.impl.XDebugSessionImpl;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.debugger.node.*;
 import org.intellij.erlang.debugger.remote.ErlangRemoteDebugRunConfiguration;
@@ -88,6 +89,18 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     mySession = session;
 
     session.setPauseActionSupported(false);
+    session.addSessionListener(new XDebugSessionListener() {
+      @Override
+      public void stackFrameChanged() {
+        XDebugSession cSession = getSession();
+        XExecutionStack ExecutionStack = ((XDebugSessionImpl) cSession).getCurrentExecutionStack();
+        if (ExecutionStack instanceof ErlangExecutionStack){
+          ErlangProcessSnapshot Snap = ((ErlangExecutionStack)ExecutionStack).getSnapshot();
+          myDebuggerNode.processSuspended(Snap.getPid());
+        }
+
+      }
+    });
 
     myExecutionEnvironment = env;
     myRunningState = getRunConfiguration().getState(myExecutionEnvironment.getExecutor(), myExecutionEnvironment);
@@ -156,9 +169,21 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     getSession().reportMessage(message, MessageType.ERROR);
   }
 
+
+  @Override
+  public void printMessage(String messageText, ConsoleViewContentType type) {
+    getSession().getConsoleView().print(messageText + "\n", type);
+  }
+
+  private void printMessage(String messageText){
+    printMessage(messageText, ConsoleViewContentType.LOG_INFO_OUTPUT);
+  }
+  
   @Override
   public void unknownMessage(String messageText) {
     getSession().reportMessage("Unknown message received: " + messageText, MessageType.WARNING);
+    getSession().getConsoleView().print("Unknown message received: " + messageText + "\n",
+                                        ConsoleViewContentType.LOG_WARNING_OUTPUT);
   }
 
   @Override
@@ -346,7 +371,13 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
       LOG.debug(commandLine.getCommandLineString());
 
       Process process = commandLine.createProcess();
-      erlangProcessHandler = new OSProcessHandler(process, commandLine.getCommandLineString());
+      erlangProcessHandler = new OSProcessHandler(process, commandLine.getCommandLineString()){
+        @NotNull
+        @Override
+        protected BaseOutputReader.Options readerOptions() {
+          return BaseOutputReader.Options.forMostlySilentProcess();
+        }
+      };
 
       LOG.debug("Debugger process started.");
 

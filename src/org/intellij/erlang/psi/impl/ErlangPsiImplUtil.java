@@ -68,7 +68,6 @@ import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.sdk.ErlangSdkRelease;
 import org.intellij.erlang.sdk.ErlangSdkType;
-import org.intellij.erlang.sdk.ErlangSystemUtil;
 import org.intellij.erlang.stubs.*;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -81,7 +80,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.intellij.patterns.PlatformPatterns.psiElement;
-
 public class ErlangPsiImplUtil {
   public static final Set<String> KNOWN_MACROS = ContainerUtil.set("MODULE", "MODULE_STRING", "FILE", "LINE", "MACHINE", "FUNCTION_NAME", "FUNCTION_ARITY");
   public static final Set<String> BUILT_IN_TYPES = ContainerUtil.set(
@@ -523,6 +521,19 @@ public class ErlangPsiImplUtil {
     return prevSib.textMatches(":");
   }
 
+  public static boolean inMacroArguments(PsiElement psiElement) {
+    ErlangFunctionCallExpression callExpression = PsiTreeUtil.getParentOfType(psiElement, ErlangFunctionCallExpression.class, true);
+    while (callExpression != null) {
+      if (PsiTreeUtil.isAncestor(callExpression.getArgumentList(), psiElement, true) &&
+          callExpression.getFirstChild().getFirstChild() instanceof ErlangMacros) {
+        return true;
+      }
+      callExpression = PsiTreeUtil.getParentOfType(callExpression, ErlangFunctionCallExpression.class, true);
+    }
+    return false;
+  }
+
+
   public static boolean inLeftPartOfAssignment(@NotNull PsiElement psiElement) {
     return inLeftPartOfAssignment(psiElement, true);
   }
@@ -535,6 +546,145 @@ public class ErlangPsiImplUtil {
       }
       assignment = PsiTreeUtil.getParentOfType(assignment, ErlangAssignmentExpression.class, true);
     }
+    return inCaseAssignmentAllBranch(psiElement, strict);
+  }
+
+  public static boolean inCaseAssignment(@NotNull PsiElement psiElement) {
+    PsiElement parent = psiElement.getParent();
+    PsiElement element = psiElement;
+    while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
+      while (element != null) {
+        if (element instanceof ErlangCaseExpression) {
+          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
+          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, true)) {
+            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+            boolean allBranchFind = false;
+            for (ErlangCrClause c : crClauseList) {
+              ErlangClauseBody clauseBody = c.getClauseBody();
+              ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+              boolean thisFind = ((clauseBody != null) && findInClause(clauseBody, psiElement)) ||
+                                 ((clauseArg != null) && findInClause(clauseArg, psiElement));
+              allBranchFind |= thisFind;
+            }
+            if (allBranchFind) return true;
+          }
+        }
+        element = element.getPrevSibling();
+      }
+      element = parent;
+      parent = parent.getParent();
+    }
+    return false;
+  }
+
+  public static boolean inFunExpression(PsiElement psiElement){
+    return PsiTreeUtil.getParentOfType(psiElement, ErlangFunExpression.class) != null;
+  }
+
+  @Nullable
+  public static PsiElement findValInCaseAssignmentButNotDefine(@NotNull PsiElement psiElement) {
+    PsiElement parent = psiElement.getParent();
+    PsiElement element = psiElement;
+    while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
+      while (element != null) {
+        if (element instanceof ErlangCaseExpression) {
+          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
+          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, true)) {
+            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+            for (ErlangCrClause c : crClauseList) {
+              ErlangClauseBody clauseBody = c.getClauseBody();
+              ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+              boolean thisFindInBody = clauseBody != null && findInClause(clauseBody, psiElement);
+              boolean thisFineInArg = clauseArg != null && findInClause(clauseArg, psiElement);
+              if (!(thisFindInBody | thisFineInArg)) return clauseBody;
+            }
+          }
+        }
+        element = element.getPrevSibling();
+      }
+      element = parent;
+      parent = parent.getParent();
+    }
+    return null;
+
+  }
+
+
+  private static boolean inCaseAssignmentAllBranch(@NotNull PsiElement psiElement, boolean strict){
+    PsiElement parent = psiElement.getParent();
+    PsiElement element = psiElement;
+    while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
+      while (element != null) {
+        if (element instanceof ErlangCaseExpression) {
+          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
+          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, strict)) {
+            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+            boolean result = true;
+            boolean thisFind;
+            for (ErlangCrClause c : crClauseList) {
+              ErlangClauseBody clauseBody = c.getClauseBody();
+              if (hasThrowCall(clauseBody))
+              {
+                thisFind = true;
+              }
+              else {
+                ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+                thisFind = ((clauseBody != null) && findInClause(clauseBody, psiElement)) ||
+                                   ((clauseArg != null) && findInClause(clauseArg, psiElement));
+              }
+              result &= thisFind;
+            }
+            if(result){
+              return true;
+            }
+          }
+        }
+        element = element.getPrevSibling();
+      }
+      element = parent;
+      parent = parent.getParent();
+    }
+    return false;
+  }
+
+  private static boolean hasThrowCall(@Nullable ErlangClauseBody clauseBody) {
+    ErlangGlobalFunctionCallExpression globalFunctionCallExpression = PsiTreeUtil.findChildOfType(clauseBody, ErlangGlobalFunctionCallExpression.class);
+
+    if (globalFunctionCallExpression != null &&
+        globalFunctionCallExpression.getModuleRef().getText().equals("erlang") &&
+        globalFunctionCallExpression.getFunctionCallExpression().getName().equals("throw"))
+      //erlang:throw(xx
+      return true;
+    ErlangFunctionCallExpression functionCallExpression = PsiTreeUtil.findChildOfType(clauseBody, ErlangFunctionCallExpression.class);
+    if (functionCallExpression != null &&
+        functionCallExpression.getName().equals("throw") &&
+        !functionCallExpression.getPrevSibling().getText().equals(":"))
+      // throw(xx
+      return true;
+    return false;
+  }
+
+  private static boolean findInClause(ErlangClauseBody clauseBody, PsiElement psiElement) {
+    Collection<ErlangAssignmentExpression> assignmentExpressions = PsiTreeUtil.findChildrenOfType(clauseBody, ErlangAssignmentExpression.class);
+    for (ErlangAssignmentExpression assignmentExpression :assignmentExpressions){
+      Collection<ErlangQVar> qVars = PsiTreeUtil.findChildrenOfType(assignmentExpression.getLeft(), ErlangQVar.class);
+      for (ErlangQVar var : qVars){
+        if (var.getName().equals(psiElement.getText()))
+          return true;
+      }
+    }
+    //if code is erlang:throw or throw, means code
+    return false;
+  }
+
+  private static boolean findInClause(ErlangArgumentDefinition argumentDefinition, PsiElement psiElement) {
+    Collection<ErlangQVar> vars = PsiTreeUtil.findChildrenOfType(argumentDefinition, ErlangQVar.class);
+    for (ErlangQVar var :vars){
+      if (var.getName().equals(psiElement.getText())) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -1019,12 +1169,16 @@ public class ErlangPsiImplUtil {
   @SuppressWarnings("UnusedParameters")
   public static boolean processDeclarations(@NotNull ErlangCaseExpression o, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
     List<ErlangCrClause> crClauseList = o.getCrClauseList();
-    boolean result = true;
+    boolean result = crClauseList.size() > 0;
     for (ErlangCrClause c : crClauseList) {
+      boolean thisFind = false;
       ErlangClauseBody clauseBody = c.getClauseBody();
-      if (clauseBody != null) result &= processDeclarationRecursive(clauseBody, processor, state);
+      if (clauseBody != null) thisFind = !processDeclarationRecursive(clauseBody, processor, state);
+      ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+      if (clauseArg != null) thisFind |= !processDeclarationRecursive(clauseArg, processor, state);
+      result &= thisFind;
     }
-    return result;
+    return !result;
   }
 
   @SuppressWarnings("UnusedParameters")
@@ -1124,11 +1278,12 @@ public class ErlangPsiImplUtil {
       }
     }
     //TODO consider providing source roots functionality to small IDEs
-    if (ErlangSystemUtil.isSmallIde()) {
+//    if (ErlangSystemUtil.isSmallIde()) {
+    {
       VirtualFile appRoot = getContainingOtpAppRoot(project, parent);
       return getDirectlyIncludedFilesForSmallIde(project, relativePath, appRoot);
     }
-    return ContainerUtil.emptyList();
+//    return ContainerUtil.emptyList();
   }
 
   @NotNull
@@ -1144,6 +1299,18 @@ public class ErlangPsiImplUtil {
         VirtualFile includePathVirtualFile = VfsUtilCore.findRelativeFile(includePath, otpAppRoot);
         ErlangFile includedFile = getRelativeErlangFile(project, includeStringPath, includePathVirtualFile);
         if (includedFile != null) return new SmartList<>(includedFile);
+      }
+    }
+    otpAppRoot = otpAppRoot.getParent();
+    if (otpAppRoot.getName().equals("apps")){
+      otpAppRoot = otpAppRoot.getParent();
+      rebarConfigPsi = RebarConfigUtil.getRebarConfig(project, otpAppRoot);
+      if (rebarConfigPsi != null) {
+        for(String includePath : ContainerUtil.reverse(RebarConfigUtil.getIncludePaths(rebarConfigPsi))) {
+          VirtualFile includePathVirtualFile = VfsUtilCore.findRelativeFile(includePath, otpAppRoot);
+          ErlangFile includedFile = getRelativeErlangFile(project, includeStringPath, includePathVirtualFile);
+          if (includedFile != null) return new SmartList<>(includedFile);
+        }
       }
     }
     return ContainerUtil.emptyList();

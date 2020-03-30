@@ -55,7 +55,7 @@ public class ErlangVarProcessor implements PsiScopeProcessor {
     if (!psiElement.getText().equals(myRequestedName)) return true;
     if (psiElement.equals(myOrigin)) return true;
     if (inFunArgList(myOrigin)) return true;
-    
+
     ErlangFunctionClause functionClause = PsiTreeUtil.getTopmostParentOfType(myOrigin, ErlangFunctionClause.class);
     ErlangSpecification spec = PsiTreeUtil.getTopmostParentOfType(myOrigin, ErlangSpecification.class);
     ErlangMacrosDefinition macroDefinition = PsiTreeUtil.getTopmostParentOfType(myOrigin, ErlangMacrosDefinition.class);
@@ -68,16 +68,16 @@ public class ErlangVarProcessor implements PsiScopeProcessor {
     boolean inFunction = inFunctionClause && inDefinitionOrAssignment;
     boolean inMacroDefinition = PsiTreeUtil.isAncestor(macroDefinition, psiElement, false) && inDefinitionOrAssignment;
     boolean inBinaryWidthExpression = isBinaryWidthExpression(psiElement);
-    
+
     if (inAssignment && inBinaryWidthExpression) return true;
-    
+
     if (inFunction || inModule(psiElement) || inSpecification || inMacroDefinition) {
       boolean inArgumentList = inArgumentList(psiElement);
       boolean inArgumentListBeforeAssignment =
         PsiTreeUtil.getParentOfType(psiElement, ErlangArgumentList.class, ErlangAssignmentExpression.class) instanceof ErlangArgumentList;
       if (inArgumentList && inArgumentListBeforeAssignment && !inDefinitionBeforeArgumentList(psiElement)) return true;
       if (inDifferentCrClauses(psiElement)) return true;
-      if (hasNarrowerParentScope(psiElement)) return true;
+//      if (hasNarrowerParentScope(psiElement)) return true;
       // put all possible variables to list
       boolean inArgDefList = inFunArgList(psiElement);
       return !myVarList.add((ErlangQVar) psiElement) && !inArgDefList;

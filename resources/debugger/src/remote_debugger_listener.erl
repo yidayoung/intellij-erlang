@@ -97,16 +97,36 @@ run_debugger(Module, Function, ArgsString) ->
   end.
 
 step_into(Pid) ->
-  int:step(Pid).
+  int:step(Pid),
+  update_break_state().
 
 step_over(Pid) ->
-  int:next(Pid).
+  int:next(Pid),
+  update_break_state().
 
 step_out(Pid) ->
-  int:finish(Pid).
+  int:finish(Pid),
+  update_break_state().
+
 
 continue(Pid) ->
-  int:continue(Pid).
+  timer:sleep(100),
+  int:continue(Pid),
+  update_break_state().
+
+
+%% check if need send breakpoint_reached again, because continue only deal one pid
+%% but there may have more than one pid break
+%% last continue pid may in list, but no stack
+update_break_state() ->
+  Snapshots = remote_debugger_notifier:snapshot_with_stacks(),
+  Snapshots2 = [E||{_Pid, _, _, _, [{MetaLevel,_, _}|_]}=E<-Snapshots, MetaLevel > 1],
+  case Snapshots2 of
+    [{NewPid, _, _, _, _}|_] = Snapshot->
+      ?RDEBUG_NOTIFIER ! #breakpoint_reached{pid = NewPid, snapshot = Snapshot};
+    _ ->
+      pass
+  end.
 
 evaluate(Pid, Expression, MaybeStackPointer) ->
   {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
@@ -145,7 +165,7 @@ debug_remote_node(Node, Cookie, Modules) ->
   NodeConnected = connect_to_remote_node(Node, Cookie),
   Status = if
     NodeConnected -> interpret_modules(Modules, Node);
-    true -> failed_to_connect
+    true -> {failed_to_connect, Node, Cookie}
   end,
   send_debug_remote_node_response(Node, Status).
 
@@ -155,10 +175,10 @@ send_debug_remote_node_response(Node, Error) ->
   ?RDEBUG_NOTIFIER ! #debug_remote_node_response{node = Node, status = {error, Error}}.
 
 connect_to_remote_node(Node, nocookie) ->
-  net_kernel:connect(Node);
+  net_kernel:connect_node(Node);
 connect_to_remote_node(Node, Cookie) ->
   erlang:set_cookie(Node, Cookie),
-  net_kernel:connect(Node).
+  net_kernel:connect_node(Node).
 
 interpret_modules(Modules, Node) ->
   IntNiResults = [{Module, int:ni(Module)} || Module <- Modules],

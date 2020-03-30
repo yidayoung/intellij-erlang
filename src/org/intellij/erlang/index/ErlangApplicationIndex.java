@@ -157,14 +157,16 @@ public class ErlangApplicationIndex extends ScalarIndexExtension<String> {
     public boolean process(@NotNull VirtualFile appFile, @Nullable Void value) {
       VirtualFile libDir = getLibraryDirectory(appFile);
       if (libDir == null) return true;
-      String appName = getApplicationName(appFile);
       //applications with no version specification have higher priority
-      if (myPath == null || appName.equals(libDir.getName())) {
+      //shot path have higher priority
+      if (myPath == null || libDir.getPath().length() <= myPath.getPath().length()) {
         myPath = libDir;
         return true;
       }
+      String appName = getApplicationName(appFile);
       if (appName.equals(myPath.getName())) return true;
-      myPath = myPath.getName().compareTo(libDir.getName()) < 0 ? libDir : myPath;
+      //shot path have higher priority, equal but long path may from build, should't be libDir
+      myPath = myPath.getName().compareTo(libDir.getName()) < 0 && libDir.getPath().length() < myPath.getPath().length() ? libDir : myPath;
       return true;
     }
 
