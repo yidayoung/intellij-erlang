@@ -84,6 +84,9 @@ final class ImportedOtpApp {
                 String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
                 myApps.add(appName);
                 myDeps.add(appName);
+                addPath(file, "src", mySourcePaths);
+                addPath(file, "test", myTestPaths);
+                addPath(file, "include", myIncludePaths);
               }
               return true;
             }
@@ -253,7 +256,7 @@ final class ImportedOtpApp {
     myParseTransforms.addAll(RebarConfigUtil.getParseTransforms(rebarConfig));
   }
 
-  private void addPath(VirtualFile base, String relativeIncludePath, Set<VirtualFile> paths) {
+  private static void addPath(VirtualFile base, String relativeIncludePath, Set<VirtualFile> paths) {
     VirtualFile path = VfsUtilCore.findRelativeFile(relativeIncludePath, base);
     if (path != null) {
       paths.add(path);

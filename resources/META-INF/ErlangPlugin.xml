@@ -57,9 +57,18 @@
         <!-- dialyzer -->
         <projectService serviceImplementation="org.intellij.erlang.dialyzer.DialyzerSettings"/>
 
-        <errorHandler implementation="com.intellij.diagnostic.ITNReporter"/>
+<!--        <errorHandler implementation="com.intellij.diagnostic.ITNReporter"/>-->
         <lang.formatter language="Erlang" implementationClass="org.intellij.erlang.formatter.ErlangFormattingModelBuilder"/>
-        <fileTypeFactory implementation="org.intellij.erlang.ErlangFileTypeFactory"/>
+<!--        <fileTypeFactory implementation="org.intellij.erlang.ErlangFileTypeFactory"/>-->
+        <fileType name="Erlang" implementationClass="org.intellij.erlang.BaseErlangFileType$ModuleFileType"
+                  fieldName="INSTANCE" language="Erlang" extensions="erl"/>
+        <fileType name="Erlang Header" implementationClass="org.intellij.erlang.BaseErlangFileType$HrlFileType"
+                  fieldName="INSTANCE" language="Erlang" extensions="hrl"/>
+        <fileType name="Erlang/OTP app" implementationClass="org.intellij.erlang.BaseErlangFileType$AppFileType"
+                  fieldName="INSTANCE" language="Erlang" extensions="app;app.src"/>
+        <fileType name="Erlang Terms" implementationClass="org.intellij.erlang.BaseErlangFileType$ErlangTermsFileType"
+                  fieldName="INSTANCE" language="Erlang" extensions="config;routes;rel"/>
+        <usageTargetProvider implementation="org.intellij.erlang.search.ErlangTargetProvider"/>
         <iconProvider implementation="org.intellij.erlang.icons.ErlangIconProvider"/>
         <updateAddedFileProcessor implementation="org.intellij.erlang.ErlangUpdateAddedFileProcessor"/>
         <lang.findUsagesProvider language="Erlang" implementationClass="org.intellij.erlang.search.ErlangFindUsagesProvider"/>

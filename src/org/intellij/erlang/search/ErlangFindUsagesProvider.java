@@ -20,6 +20,7 @@ import com.intellij.lang.HelpID;
 import com.intellij.lang.cacheBuilder.WordOccurrence;
 import com.intellij.lang.cacheBuilder.WordsScanner;
 import com.intellij.lang.findUsages.FindUsagesProvider;
+import com.intellij.lexer.LexerPosition;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.ElementDescriptionUtil;
@@ -43,13 +44,39 @@ public class ErlangFindUsagesProvider implements FindUsagesProvider {
       while ((tokenType = lexer.getTokenType()) != null) {
         //TODO process occurrences in string literals and comments
         if (tokenType == ErlangTypes.ERL_ATOM_NAME || tokenType == ErlangTypes.ERL_VAR) {
+          String text = lexer.getTokenText();
+          if (text.equals("include") || text.equals("include_lib")) {
+            LexerPosition currentPosition = lexer.getCurrentPosition();
+            lexer.advance();
+            if (lexer.getTokenType() == ErlangTypes.ERL_PAR_LEFT) {
+              lexer.advance();
+              if (lexer.getTokenType() == ErlangTypes.ERL_STRING) {
+                String includeString = lexer.getTokenText();
+                if (includeString.length() > 2) {
+                  int start = StringUtil.lastIndexOf(includeString, '/', 0, includeString.length());
+                  start = Math.max(start, 0) + lexer.getTokenStart();
+                  int end = StringUtil.lastIndexOf(includeString, '.', 0, includeString.length()) + lexer.getTokenStart();
+                  if (end > start)
+                    processor.process(new WordOccurrence(fileText, start + 1, end, WordOccurrence.Kind.CODE));
+                }
+              }
+            }
+            lexer.restore(currentPosition);
+          }
           int tokenStart = lexer.getTokenStart();
-          for (TextRange wordRange : StringUtil.getWordIndicesIn(lexer.getTokenText())) {
+          for (TextRange wordRange : StringUtil.getWordIndicesIn(text)) {
             int start = tokenStart + wordRange.getStartOffset();
             int end = tokenStart + wordRange.getEndOffset();
             processor.process(new WordOccurrence(fileText, start, end, WordOccurrence.Kind.CODE));
           }
         }
+//        if (tokenType == ErlangTypes.ERL_INCLUDE_STRING) {
+//          int tokenStart = lexer.getTokenStart();
+//          int tokenEnd = lexer.getTokenEnd();
+//          String text = lexer.getTokenText();
+//          int start = tokenStart + StringUtil.lastIndexOf(text, '/', 0, text.length());
+//          processor.process(new WordOccurrence(fileText, start, tokenEnd, WordOccurrence.Kind.CODE));
+//        }
         lexer.advance();
       }
     };
@@ -58,9 +85,9 @@ public class ErlangFindUsagesProvider implements FindUsagesProvider {
   @Override
   public boolean canFindUsagesFor(@NotNull PsiElement o) {
     return o instanceof ErlangFunction || o instanceof ErlangQVar
-      || o instanceof ErlangRecordDefinition || o instanceof ErlangModule
-      || o instanceof ErlangMacrosDefinition || o instanceof ErlangTypedExpr
-      || o instanceof ErlangTypeDefinition || o instanceof ErlangQAtom
+           || o instanceof ErlangRecordDefinition || o instanceof ErlangModule
+           || o instanceof ErlangMacrosDefinition || o instanceof ErlangTypedExpr
+           || o instanceof ErlangTypeDefinition || o instanceof ErlangQAtom
       ;
   }
 

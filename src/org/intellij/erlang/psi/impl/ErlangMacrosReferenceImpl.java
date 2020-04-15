@@ -27,6 +27,7 @@ import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.psi.ErlangFile;
 import org.intellij.erlang.psi.ErlangMacrosDefinition;
 import org.intellij.erlang.psi.ErlangMacrosName;
+import org.intellij.erlang.psi.ErlangMacros;
 import org.jetbrains.annotations.NotNull;
 
 public class ErlangMacrosReferenceImpl extends PsiReferenceBase<PsiElement> {
@@ -69,6 +70,7 @@ public class ErlangMacrosReferenceImpl extends PsiReferenceBase<PsiElement> {
 
   @Override
   public boolean isReferenceTo(PsiElement element) {
+    if (!(myElement instanceof ErlangMacros)) return false;
     ErlangMacrosDefinition definition = ObjectUtils.tryCast(element, ErlangMacrosDefinition.class);
     String macroName = definition != null ? definition.getName() : null;
     return macroName != null && macroName.equals(myReferenceName) && definition.getMacrosName() != myNameElement;

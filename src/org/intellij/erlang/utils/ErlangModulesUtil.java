@@ -30,6 +30,7 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.Processor;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.Convertor;
+import org.intellij.erlang.BaseErlangFileType;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.index.ErlangModuleIndex;
 import org.intellij.erlang.psi.ErlangFile;
@@ -107,7 +108,7 @@ public final class ErlangModulesUtil {
   private static Collection<ErlangFile> addErlangFiles(@NotNull Module module,
                                                        boolean onlyTestModules,
                                                        @NotNull Collection<ErlangFile> erlangModules,
-                                                       @NotNull ErlangFileType type) {
+                                                       @NotNull BaseErlangFileType type) {
     Processor<VirtualFile> filesCollector = getErlangModulesCollector(PsiManager.getInstance(module.getProject()), erlangModules, type);
     collectFiles(module, onlyTestModules, filesCollector);
     return erlangModules;
@@ -117,7 +118,7 @@ public final class ErlangModulesUtil {
   private static Collection<VirtualFile> addFiles(@NotNull Module module,
                                                   boolean onlyTest,
                                                   @NotNull final Collection<VirtualFile> files,
-                                                  @NotNull final ErlangFileType type) {
+                                                  @NotNull final BaseErlangFileType type) {
     Processor<VirtualFile> modulesCollector = virtualFile -> {
       if (virtualFile.getFileType() == type) {
         files.add(virtualFile);
@@ -179,7 +180,7 @@ public final class ErlangModulesUtil {
   @NotNull
   private static Processor<VirtualFile> getErlangModulesCollector(@NotNull final PsiManager psiManager,
                                                                   @NotNull final Collection<ErlangFile> erlangFiles,
-                                                                  @NotNull final ErlangFileType type) {
+                                                                  @NotNull final BaseErlangFileType type) {
     return virtualFile -> {
       if (virtualFile.getFileType() == type) {
         PsiFile psiFile = psiManager.findFile(virtualFile);

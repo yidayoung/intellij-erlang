@@ -35,6 +35,7 @@ import com.intellij.util.*;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.MultiMap;
 import gnu.trove.THashMap;
+import org.intellij.erlang.BaseErlangFileType;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.ErlangLanguage;
 import org.intellij.erlang.ErlangTypes;
@@ -318,7 +319,7 @@ public class ErlangFileImpl extends PsiFileBase implements ErlangFile, PsiNameId
       "This method should only be called in unit tests";
 
     String extension = PathUtil.getFileExtension(getName());
-    for (ErlangFileType type : ErlangFileType.TYPES) {
+    for (BaseErlangFileType type : ErlangFileType.TYPES) {
       for (String defaultExtension : type.getDefaultExtensions()) {
         if (StringUtil.equalsIgnoreCase(defaultExtension, extension)) {
           return type;

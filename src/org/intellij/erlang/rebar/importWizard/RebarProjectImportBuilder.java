@@ -145,22 +145,24 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       public void run(@NotNull final ProgressIndicator indicator) {
         VirtualFile RootRebar = myProjectRoot.findChild("rebar.config");
         assert RootRebar != null : "no rebar.config in root";
-        if(null != myProjectRoot.findChild("_build")) {
-          //rebar3
-          rootApp = new ImportedOtpApp(projectRoot, true);
-          final LinkedHashSet<ImportedOtpApp> rootOtpApps = getRootImportedOtpApps(indicator, rootApp.getAppDir());
-          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
-          myFoundOtpApps = new ArrayList<>(rootOtpApps);
-          myFoundOtpApps.addAll(depsOtpApps);
-        }
-        else {
-          //rebar2
-          VirtualFile RebarConfig = projectRoot.findChild("rebar.config");
-          assert RebarConfig != null;
-          rootApp = new ImportedOtpApp(projectRoot, false);
-          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
-          myFoundOtpApps = new ArrayList<>(depsOtpApps);
-        }
+        boolean isRebar3 = null != myProjectRoot.findChild("_build");
+        rootApp = new ImportedOtpApp(projectRoot, isRebar3);
+        final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
+        myFoundOtpApps = new ArrayList<>(depsOtpApps);
+//        if(null != myProjectRoot.findChild("_build")) {
+//          //rebar3
+//          rootApp = new ImportedOtpApp(projectRoot, true);
+//          final LinkedHashSet<ImportedOtpApp> rootOtpApps = getRootImportedOtpApps(indicator, rootApp.getAppDir());
+//          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
+//          myFoundOtpApps = new ArrayList<>(rootOtpApps);
+//          myFoundOtpApps.addAll(depsOtpApps);
+//        }
+//        else {
+//          //rebar2
+//          rootApp = new ImportedOtpApp(projectRoot, false);
+//          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
+//          myFoundOtpApps = new ArrayList<>(depsOtpApps);
+//        }
       }
     });
 
@@ -195,8 +197,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         if (file.isDirectory()) {
           indicator.setText2(file.getPath());
           if (isExamplesDirectory(file) || isRelDirectory(projectRoot.getPath(), file.getPath())) return false;
-          if (rootApp.getApps().contains(file.getName()))
-            return false;
+//          if (rootApp.getApps().contains(file.getName()))
+//            return false;
         }
 
         ContainerUtil.addAllNotNull(importedOtpApps, createImportedOtpApp(file, rootApp.getIsRebar3()));
@@ -312,22 +314,18 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         addIncludeDirectories(content, importedOtpApp);
         // Exclude standard folders
         excludeDirFromContent(content, ideaModuleDir, "doc");
-//        content.addExcludeFolder(VirtualFileManager.constructUrl(URLUtil.FILE_PROTOCOL, ideaModuleDirPath + File.separator + "_build"));
-        content.addExcludeFolder(VirtualFileManager.constructUrl(URLUtil.FILE_PROTOCOL, ideaModuleDirPath + File.separator + ".rebar3"));
+        excludeDirFromContent(content, ideaModuleDir, ".rebar3");
+        if (rootApp.getApps().contains(importedOtpApp.getName()))
+        // if is apps link
+        {
+          excludeDirFromContent(content, ideaModuleDir, "src");
+          excludeDirFromContent(content, ideaModuleDir, "include");
+        }
         // Initialize output paths according to Rebar conventions.
         CompilerModuleExtension compilerModuleExt = rootModel.getModuleExtension(CompilerModuleExtension.class);
         compilerModuleExt.inheritCompilerOutputPath(false);
-        if (!importedOtpApp.getIsRebar3()){
-          //rebar2 type or lib
-          compilerModuleExt.setCompilerOutputPath(ideaModuleDir + File.separator + "ebin");
-          compilerModuleExt.setCompilerOutputPathForTests(ideaModuleDir + File.separator + ".eunit");
-        }
-        else
-        {
-          String defaultRebar3Output = myProjectRoot + File.separator + "_build" + File.separator + "default" + File.separator + "lib" + File.separator;
-          compilerModuleExt.setCompilerOutputPath(defaultRebar3Output + module.getName() + File.separator + "ebin");
-          compilerModuleExt.setCompilerOutputPathForTests(defaultRebar3Output + module.getName() + File.separator + ".eunit");
-        }
+        compilerModuleExt.setCompilerOutputPath(ideaModuleDir + File.separator + "ebin");
+        compilerModuleExt.setCompilerOutputPathForTests(ideaModuleDir + File.separator + ".eunit");
 
         createdRootModels.add(rootModel);
         // Set inter-module dependencies

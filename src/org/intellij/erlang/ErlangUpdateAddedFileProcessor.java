@@ -26,7 +26,8 @@ import org.jetbrains.annotations.Nullable;
 public class ErlangUpdateAddedFileProcessor extends UpdateAddedFileProcessor {
   @Override
   public boolean canProcessElement(@NotNull PsiFile file) {
-    return file instanceof ErlangFile && file.getFileType() == ErlangFileType.MODULE;
+    return file instanceof ErlangFile &&
+           (file.getFileType() == ErlangFileType.MODULE || file.getFileType() == ErlangFileType.HEADER);
   }
 
   @Override
