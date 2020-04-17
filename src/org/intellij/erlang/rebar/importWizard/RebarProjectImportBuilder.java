@@ -149,20 +149,6 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         rootApp = new ImportedOtpApp(projectRoot, isRebar3);
         final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
         myFoundOtpApps = new ArrayList<>(depsOtpApps);
-//        if(null != myProjectRoot.findChild("_build")) {
-//          //rebar3
-//          rootApp = new ImportedOtpApp(projectRoot, true);
-//          final LinkedHashSet<ImportedOtpApp> rootOtpApps = getRootImportedOtpApps(indicator, rootApp.getAppDir());
-//          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
-//          myFoundOtpApps = new ArrayList<>(rootOtpApps);
-//          myFoundOtpApps.addAll(depsOtpApps);
-//        }
-//        else {
-//          //rebar2
-//          rootApp = new ImportedOtpApp(projectRoot, false);
-//          final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
-//          myFoundOtpApps = new ArrayList<>(depsOtpApps);
-//        }
       }
     });
 
@@ -173,7 +159,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       }
       return compareByParentPath;
     });
-    myFoundOtpApps.add(0, rootApp);
+//    myFoundOtpApps.add(0, rootApp);
+    ContainerUtil.addIfNotNull(myFoundOtpApps, rootApp);
     mySelectedOtpApps = new ArrayList<>(myFoundOtpApps);
     return !myFoundOtpApps.isEmpty();
   }

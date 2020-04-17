@@ -28,7 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ErlangCompilerError {
-  static final Pattern COMPILER_MESSAGE_PATTERN = Pattern.compile("^((?:[a-zA-Z]:)?.+?):(?:(\\d+):)?(\\s*Warning:)?\\s*(.+)$");
+  static final Pattern COMPILER_MESSAGE_PATTERN = Pattern.compile("^(\\S+):(\\d+):(\\s*Warning:)?\\s*(.+)$");
   static final int PATH_MATCH_INDEX = 1;
   static final int LINE_MATCH_INDEX = 2;
   static final int WARNING_MATCH_INDEX = 3;
@@ -71,7 +71,7 @@ public class ErlangCompilerError {
   @Nullable
   public static ErlangCompilerError create(@NotNull String rootPath, @NotNull String erlcMessage) {
     Matcher matcher = COMPILER_MESSAGE_PATTERN.matcher(StringUtil.trimTrailing(erlcMessage));
-    if (!matcher.matches()) return null;
+    if (!matcher.find()) return null;
 
     String relativeFilePath = FileUtil.toSystemIndependentName(matcher.group(PATH_MATCH_INDEX));
     File path = StringUtil.isEmpty(rootPath) ? new File(relativeFilePath) : new File(FileUtil.toSystemIndependentName(rootPath), relativeFilePath);
@@ -90,6 +90,6 @@ public class ErlangCompilerError {
                                                          @NotNull String details) {
     int lineNumber = StringUtil.parseInt(line, -1);
     BuildMessage.Kind category = warning != null ? BuildMessage.Kind.WARNING : BuildMessage.Kind.ERROR;
-    return new ErlangCompilerError(details, VfsUtilCore.pathToUrl(filePath), lineNumber, category);
+    return new ErlangCompilerError(details, filePath, lineNumber, category);
   }
 }

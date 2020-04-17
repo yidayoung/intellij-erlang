@@ -71,6 +71,13 @@ public class RebarBuilder extends TargetBuilder<ErlangSourceRootDescriptor, Erla
       throw new ProjectBuildException(errorMessage);
     }
 
+    if (rebarPath.contains("rebar3") && (!project.getName().equals(module.getName()))) {
+      context.processMessage(new CompilerMessage(NAME, BuildMessage.Kind.INFO,
+                                                 "rebar3 should build only run on root module:" + project.getName() +
+                                                 ",so skipped module:" + module.getName()));
+      return;
+    }
+
     JpsSdk<JpsDummyElement> sdk = ErlangTargetBuilderUtil.getSdk(context, module);
     String escriptPath = JpsErlangSdkType.getScriptInterpreterExecutable(sdk.getHomePath()).getAbsolutePath();
     boolean isRebarRun = false;

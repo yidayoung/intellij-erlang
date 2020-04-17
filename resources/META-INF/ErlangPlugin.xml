@@ -65,7 +65,7 @@
         <fileType name="Erlang Header" implementationClass="org.intellij.erlang.BaseErlangFileType$HrlFileType"
                   fieldName="INSTANCE" language="Erlang" extensions="hrl"/>
         <fileType name="Erlang/OTP app" implementationClass="org.intellij.erlang.BaseErlangFileType$AppFileType"
-                  fieldName="INSTANCE" language="Erlang" extensions="app;app.src"/>
+                  fieldName="INSTANCE" language="Erlang" extensions="app" patterns="*.app.src"/>
         <fileType name="Erlang Terms" implementationClass="org.intellij.erlang.BaseErlangFileType$ErlangTermsFileType"
                   fieldName="INSTANCE" language="Erlang" extensions="config;routes;rel"/>
         <usageTargetProvider implementation="org.intellij.erlang.search.ErlangTargetProvider"/>

@@ -94,16 +94,17 @@ public abstract class BaseErlangFileType extends LanguageFileType {
   }
 
   public static class AppFileType extends BaseErlangFileType {
-    private static final String StrAPP = "app";
-    private static final String APP_SRC = "app.src";
+    private static final String APP = "app";
+    private static final String APP_SRC = "src";
     public static final AppFileType INSTANCE = new AppFileType();
     private AppFileType() {
       super("Erlang/OTP app",
             "Erlang/OTP Application Resource File",
             ErlangIcons.OTP_APP_RESOURCE,
-            StrAPP,
+            APP,
             APP_SRC);
     }
+
 
   }
 

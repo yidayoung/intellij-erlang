@@ -49,7 +49,7 @@ public class ErlangCompilerProcessAdapter extends BuilderProcessAdapter {
     if (error != null) {
       kind = error.getKind();
       messageText = error.getErrorMessage();
-      sourcePath = VirtualFileManager.extractPath(error.getUrl());
+      sourcePath = (error.getUrl());
       line = error.getLine();
     }
     return new CompilerMessage(builderName, kind, messageText, sourcePath, -1L, -1L, -1L, line, -1L);
