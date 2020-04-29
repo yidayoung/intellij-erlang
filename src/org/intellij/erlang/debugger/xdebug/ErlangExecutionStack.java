@@ -55,9 +55,13 @@ public class ErlangExecutionStack extends XExecutionStack {
           new ErlangStackFrame(myDebugProcess, traceElement);
         myStack.add(stackFrame);
       }
-      container.addStackFrames(myStack, true);
     }
+    //@todo should add from firstFrameIndex to myStack.size not all
+    //do this because when change setting or eval in eval expression stackFrames will be empty
+    if (firstFrameIndex < myStack.size())
+      container.addStackFrames(myStack, true);
   }
+
 
   public ErlangProcessSnapshot getSnapshot(){
     return myProcessSnapshot;

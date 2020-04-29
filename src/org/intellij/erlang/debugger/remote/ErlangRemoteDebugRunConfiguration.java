@@ -33,6 +33,13 @@ public class ErlangRemoteDebugRunConfiguration extends ErlangRunConfigurationBas
   private String myCookie;
   private String myHost;
   private String myDebugNodeArgs;
+  private int myInterpretScope = IN_BREAK_POINT_FILE;
+
+  public static final int IN_BREAK_POINT_FILE = 0;
+  public static final int IN_MODULE = 1;
+  public static final int IN_PROJECT = 2;
+
+
 
   public ErlangRemoteDebugRunConfiguration(Project project, String name) {
     super(name, new ErlangModuleBasedConfiguration(project), ErlangRemoteDebugRunConfigurationType.getInstance().getConfigurationFactories()[0]);
@@ -94,4 +101,11 @@ public class ErlangRemoteDebugRunConfiguration extends ErlangRunConfigurationBas
     myDebugNodeArgs = debugNodeArgs;
   }
 
+  public int getInterpretScope() {
+    return myInterpretScope;
+  }
+
+  public void setInterpretScope(int interpretScope) {
+    myInterpretScope = interpretScope;
+  }
 }

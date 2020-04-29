@@ -59,6 +59,7 @@ import org.intellij.erlang.bif.ErlangBifDescriptor;
 import org.intellij.erlang.bif.ErlangBifTable;
 import org.intellij.erlang.completion.ErlangCompletionContributor;
 import org.intellij.erlang.completion.QuoteInsertHandler;
+import org.intellij.erlang.debugger.xdebug.ErlangExprCodeFragment;
 import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.index.ErlangApplicationIndex;
 import org.intellij.erlang.index.ErlangModuleIndex;
@@ -88,6 +89,8 @@ public class ErlangPsiImplUtil {
     "pos_integer", "ref", "string", "term", "timeout"
   );
   public static final Key<LanguageConsoleImpl> ERLANG_CONSOLE = Key.create("ERLANG_CONSOLE");
+  public static final Key<ErlangExprCodeFragment> ERLANG_CODE_FRAGMENT = Key.create("ERLANG_CODE_FRAGMENT");
+  public static final Key<PsiElement> ERLANG_CODE_FRAGMENT_CONTEXT_BY = Key.create("ERLANG_CODE_FRAGMENT_CONTEXT_BY");
 
   @NotNull
   private static final Pattern ATOM_PATTERN = Pattern.compile("[a-z][a-zA-Z_@0-9]*");
@@ -688,6 +691,11 @@ public class ErlangPsiImplUtil {
     return false;
   }
 
+  public static boolean inConsoleFile(PsiElement psiElement){
+    PsiFile psiFile = psiElement.getContainingFile();
+    return psiFile != null && ErlangParserUtil.isConsole(psiFile);
+  }
+
   public static boolean isForceSkipped(@NotNull ErlangQVar o) {
     return o.getName().startsWith("_");
   }
@@ -712,6 +720,7 @@ public class ErlangPsiImplUtil {
         ErlangFile erlangFile = (ErlangFile) containingFile;
         functions.addAll(erlangFile.getFunctions());
         functions.addAll(getExternalFunctionForCompletion(containingFile.getProject(), "erlang"));
+        functions.addAll(getExternalFunctionForCompletion(containingFile.getProject(), "user_default"));
 
         List<ErlangImportFunction> directlyImported = erlangFile.getImportedFunctions();
         List<ErlangImportFunction> importsFromIncludes = getImportsFromIncludes(erlangFile, true, "", 0);

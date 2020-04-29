@@ -24,7 +24,9 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.Processor;
 import com.intellij.xdebugger.XDebuggerUtil;
+import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
 import com.intellij.xdebugger.breakpoints.XLineBreakpointType;
+import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.ErlangTypes;
 import org.intellij.erlang.psi.*;
@@ -34,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ErlangLineBreakpointType extends XLineBreakpointType<ErlangLineBreakpointProperties> {
   private static final String ID = "ErlangLineBreakpoint";
-  private static final String NAME = "Line breakpoint";
+  private static final String NAME = "Erlang Line breakpoint";
 
   protected ErlangLineBreakpointType() {
     super(ID, NAME);
@@ -44,6 +46,13 @@ public class ErlangLineBreakpointType extends XLineBreakpointType<ErlangLineBrea
   @Override
   public ErlangLineBreakpointProperties createBreakpointProperties(@NotNull VirtualFile file, int line) {
     return new ErlangLineBreakpointProperties();
+  }
+
+  @Nullable
+  @Override
+  public XDebuggerEditorsProvider getEditorsProvider(@NotNull XLineBreakpoint<ErlangLineBreakpointProperties> breakpoint,
+                                                     @NotNull Project project) {
+    return new ErlangDebuggerProvider();
   }
 
   @Override

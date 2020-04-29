@@ -4,6 +4,7 @@
 
 main([PortText]) ->
   {ok, Host} = inet:gethostname(),
+  cl_code(),
   try erlang:list_to_integer(PortText) of
     Port -> connect_and_run(Host, Port)
   catch
@@ -34,3 +35,9 @@ wait_for_exit() ->
 stop_debugger() ->
   int:stop(),
   ok.
+
+-define(CODE_LIST, ["remote_debugger.erl", "remote_debugger_listener.erl", "remote_debugger_notifier.erl",
+  "debug_eval.erl", "debugnode.erl"]).
+cl_code() ->
+  [c:c(File) || File <- ?CODE_LIST].
+

@@ -2,13 +2,13 @@
 
 % receives commands from remote debugger
 
--export([run/1]).
+-export([run/1, set_breakpoint/3]).
 
 -include("process_names.hrl").
 -include("remote_debugger_messages.hrl").
 -include("trace_utils.hrl").
 
--record(state, {interpreted_modules = [] :: [module()]}).
+-record(state, {interpreted_modules = [] :: [module()], remote_node :: node()}).
 
 run(Debugger) ->
   register(?RDEBUG_LISTENER, self()),
@@ -32,19 +32,36 @@ handle_message(Message, State) ->
 
 uses_state(#interpret_modules{}) -> true;
 uses_state(#debug_remote_node{}) -> true;
+uses_state(#evaluate{}) -> true;
 uses_state(_Message)             -> false.
 
 process_message({interpret_modules, NewModules},
                 #state{interpreted_modules = Modules} = State) when is_list(NewModules) ->
-  interpret_modules(NewModules),
+  interpret_modules(NewModules, State#state.remote_node),
+%%  interpret_modules(NewModules),
   State#state{interpreted_modules = Modules ++ NewModules};
+process_message({evaluate, Pid, Expression, MaybeStackPointer}, #state{remote_node = Node}=State) when is_pid(Pid), is_list(Expression) ->
+  case is_top_stack(Pid, MaybeStackPointer) of
+    true ->
+      evaluate(Pid, Expression, MaybeStackPointer);
+    _ ->
+      evaluate2(Pid, Expression, MaybeStackPointer, Node)
+  end,
+  State;
 process_message({debug_remote_node, Node, Cookie}, #state{interpreted_modules = Modules} = State) ->
-  debug_remote_node(Node, Cookie, Modules), State.
+  debug_remote_node(Node, Cookie, Modules), State#state{remote_node = Node}.
 
 % commands from remote debugger
-process_message({set_breakpoint, Module, Line}) when is_atom(Module),
-                                                     is_integer(Line) ->
-  set_breakpoint(Module, Line);
+process_message({set_breakpoint, Module, Line, Condition}) when is_atom(Module),
+                                                     is_integer(Line), is_list(Condition) ->
+  set_breakpoint(Module, Line),
+  if
+    length(Condition) > 0 ->
+      ensure_condition(Condition),
+      int:test_at_break(Module, Line, {debug_condition, list_to_atom(Condition)});
+    true ->
+      pass
+  end;
 process_message({remove_breakpoint, Module, Line}) when is_atom(Module),
                                                         is_integer(Line) ->
   remove_breakpoint(Module, Line);
@@ -60,9 +77,6 @@ process_message({step_out, Pid}) when is_pid(Pid) ->
   step_out(Pid);
 process_message({continue, Pid}) when is_pid(Pid) ->
   continue(Pid);
-process_message({evaluate, Pid, Expression, MaybeStackPointer}) when is_pid(Pid),
-                                                                     is_list(Expression) ->
-  evaluate(Pid, Expression, MaybeStackPointer);
 % responses from interpreter
 process_message({_Meta, {eval_rsp, EvalResponse}}) ->
   evaluate_response(EvalResponse);
@@ -80,11 +94,18 @@ set_breakpoint(Module, Line) ->
   },
   ?RDEBUG_NOTIFIER ! Response.
 
+set_breakpoint(Module, Line, Expression) ->
+  Response = #set_breakpoint_response{
+    module = Module,
+    line = Line,
+    status = int:test_at_break(Module, Line, {?MODULE, check_val})
+  },
+  put({break, Module, Line}, Expression),
+  ?RDEBUG_NOTIFIER ! Response.
+
 remove_breakpoint(Module, Line) ->
   int:delete_break(Module, Line).
 
-interpret_modules(Modules) ->
-  interpret_modules(Modules, node()).
 
 %%TODO handle all processes which are being debugged, not only the spawned one.
 run_debugger(Module, Function, ArgsString) ->
@@ -97,45 +118,85 @@ run_debugger(Module, Function, ArgsString) ->
   end.
 
 step_into(Pid) ->
-  int:step(Pid),
-  update_break_state().
+  update_break_state(Pid),
+  int:step(Pid).
 
 step_over(Pid) ->
-  int:next(Pid),
-  update_break_state().
+  update_break_state(Pid),
+  int:next(Pid).
 
 step_out(Pid) ->
-  int:finish(Pid),
-  update_break_state().
+  update_break_state(Pid),
+  int:finish(Pid).
 
 
 continue(Pid) ->
-  timer:sleep(100),
-  int:continue(Pid),
-  update_break_state().
+  update_break_state(Pid),
+  int:continue(Pid).
 
 
 %% check if need send breakpoint_reached again, because continue only deal one pid
 %% but there may have more than one pid break
-%% last continue pid may in list, but no stack
-update_break_state() ->
+update_break_state(ExceptPid) ->
   Snapshots = remote_debugger_notifier:snapshot_with_stacks(),
-  Snapshots2 = [E||{_Pid, _, _, _, [{MetaLevel,_, _}|_]}=E<-Snapshots, MetaLevel > 1],
+  Snapshots2 = [E||{Pid, _, _, _, _}=E<-Snapshots, Pid =/= ExceptPid],
   case Snapshots2 of
-    [{NewPid, _, _, _, _}|_] = Snapshot->
-      ?RDEBUG_NOTIFIER ! #breakpoint_reached{pid = NewPid, snapshot = Snapshot};
+    [{_NewPid, _, _, _, _}|_] = Snapshot->
+      %% set pid undefined to mark this is sync message not new
+      ?RDEBUG_NOTIFIER ! #breakpoint_reached{pid = undefined, snapshot = Snapshot};
     _ ->
       pass
   end.
 
+is_top_stack(_Pid, 0) ->
+  true;
+is_top_stack(Pid, StackPointer) ->
+  case get_orignal_stack(Pid) of
+    [{TopSP, _}|_] ->
+      StackPointer == TopSP;
+    _ ->
+      false
+  end.
+
+
+evaluate2(Pid, Expression, StackPointer, Node) ->
+  {ok, Meta} = get_meta(Pid),
+  R = case catch debug_eval:parse_expression(Expression) of
+        {ok, Parsed} ->
+          try
+            Bindings = get_bindings(Meta, StackPointer),
+            %% erl_eval only allow used Bind in Bindings
+            FixResult = debug_eval:check_bindings(Parsed, Bindings, []),
+            case FixResult of
+              {ok, NewBindings} ->
+                {value, V, _} = rpc:call(Node, erl_eval, exprs, [Parsed, NewBindings]),
+                {local_eval_mode, V};
+              _ ->
+                FixResult
+            end
+          catch
+            ErrType:ErrReason ->
+              {local_eval_error, Parsed, ErrType, ErrReason}
+          end;
+        _ ->
+          'local eval parse failed!'
+      end,
+  evaluate_response(R).
+
 evaluate(Pid, Expression, MaybeStackPointer) ->
-  {ok, Meta} = dbg_iserver:call({get_meta, Pid}),
-  MetaArgsList = [?MODULE, Expression],
-  MetaArgsListWithSP = case MaybeStackPointer =:= undefined of
-    true -> MetaArgsList;
-    false -> MetaArgsList ++ [MaybeStackPointer]
-  end,
-  int:meta(Meta, eval, list_to_tuple(MetaArgsListWithSP)).
+  {ok, Meta} = get_meta(Pid),
+  MetaArgsListWithSP = case MaybeStackPointer =:= 0 of
+                         true -> {?MODULE, Expression};
+                         false -> {?MODULE, Expression, MaybeStackPointer}
+                       end,
+  dbg_icmd:eval(Meta,MetaArgsListWithSP).
+
+
+get_bindings(Meta, SP) ->
+  int:meta(Meta, bindings, SP).
+
+get_meta(Pid) ->
+  dbg_iserver:call({get_meta, Pid}).
 
 evaluate_response(EvalResponse) ->
   ?RDEBUG_NOTIFIER ! #evaluate_response{result = EvalResponse}.
@@ -161,10 +222,10 @@ eval_argslist(ExprList) ->
       error
   end.
 
-debug_remote_node(Node, Cookie, Modules) ->
+debug_remote_node(Node, Cookie, _Modules) ->
   NodeConnected = connect_to_remote_node(Node, Cookie),
   Status = if
-    NodeConnected -> interpret_modules(Modules, Node);
+    NodeConnected -> ok;
     true -> {failed_to_connect, Node, Cookie}
   end,
   send_debug_remote_node_response(Node, Status).
@@ -175,11 +236,21 @@ send_debug_remote_node_response(Node, Error) ->
   ?RDEBUG_NOTIFIER ! #debug_remote_node_response{node = Node, status = {error, Error}}.
 
 connect_to_remote_node(Node, nocookie) ->
-  net_kernel:connect_node(Node);
+  connect_node(Node);
 connect_to_remote_node(Node, Cookie) ->
   erlang:set_cookie(Node, Cookie),
-  net_kernel:connect_node(Node).
+  connect_node(Node).
 
+connect_node(Node) ->
+  case erlang:function_exported(net_kernel, connect, 1) of
+    true ->
+      net_kernel:connect(Node);
+    _ ->
+      net_kernel:connect_node(Node)
+  end.
+
+interpret_modules(_Modules, undefined) ->
+  ignore;
 interpret_modules(Modules, Node) ->
   IntNiResults = [{Module, int:ni(Module)} || Module <- Modules],
   send_interpret_modules_response(Node, IntNiResults),
@@ -191,3 +262,29 @@ send_interpret_modules_response(Node, IntResults) ->
               ({Module, error}) -> {Module, int:interpretable(Module)}
             end, IntResults),
   ?RDEBUG_NOTIFIER ! #interpret_modules_response{node = Node, statuses = Statuses}.
+
+
+get_orignal_stack(Pid) ->
+  case get_meta(Pid) of
+    {ok, MetaPid} ->
+      int:meta(MetaPid, backtrace, all);
+    Error ->
+      io:format("Failed to obtain meta pid for ~p: ~p~n", [Pid, Error]),
+      []
+  end.
+
+
+ensure_condition(Condition) ->
+  case erlang:function_exported(debug_condition, list_to_atom(Condition), 1) of
+    true ->
+      pass;
+    _ ->
+      add_condition(Condition)
+  end.
+
+add_condition(Condition) ->
+  FunString =  io_lib:format("'~s'(B) -> debug_eval:eval_with_bindings(\"~s\", B).\n",[Condition,Condition]),
+  file:write_file("debug_condition.erl", FunString, [append]),
+  io:format("add condition ~s~n",[Condition]),
+  c:nc("debug_eval.erl"),
+  c:nc("debug_condition.erl", [nowarn_export_all]).

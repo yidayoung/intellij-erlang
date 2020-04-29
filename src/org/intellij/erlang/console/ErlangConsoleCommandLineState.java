@@ -29,6 +29,7 @@ import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.util.io.BaseOutputReader;
 import org.jetbrains.annotations.NotNull;
 
 public class ErlangConsoleCommandLineState extends CommandLineState {
@@ -60,7 +61,13 @@ public class ErlangConsoleCommandLineState extends CommandLineState {
     commandLine.addParameters(StringUtil.split(consoleArgs, " "));
     commandLine.addParameters(ErlangConsoleUtil.getCodePath(project, module, false));
     commandLine.setWorkDirectory(ErlangConsoleUtil.getWorkingDirPath(project, myConfig.getWorkingDirPath()));
-    OSProcessHandler handler = new OSProcessHandler(commandLine.createProcess(), commandLine.getCommandLineString());
+    OSProcessHandler handler = new OSProcessHandler(commandLine.createProcess(), commandLine.getCommandLineString()){
+      @NotNull
+      @Override
+      protected BaseOutputReader.Options readerOptions() {
+        return BaseOutputReader.Options.forMostlySilentProcess();
+      }
+    };
     ProcessTerminatedListener.attach(handler);
     return handler;
   }

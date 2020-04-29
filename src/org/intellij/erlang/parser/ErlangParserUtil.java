@@ -23,11 +23,13 @@ import com.intellij.lang.parser.GeneratedParserUtilBase;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.TokenType;
 import com.intellij.psi.impl.source.resolve.FileContextUtil;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ArrayUtil;
 import com.intellij.util.indexing.IndexingDataKeys;
 import gnu.trove.TObjectLongHashMap;
@@ -57,7 +59,12 @@ public class ErlangParserUtil extends GeneratedParserUtilBase {
   }
 
   public static boolean isConsole(@NotNull PsiFile file) {
-    return file.getOriginalFile().getUserData(ErlangPsiImplUtil.ERLANG_CONSOLE) != null;
+    return file.getOriginalFile().getUserData(ErlangPsiImplUtil.ERLANG_CONSOLE) != null ||
+           isCodeFragment(file);
+  }
+
+  public static boolean isCodeFragment(@NotNull PsiFile file) {
+    return file.getOriginalFile().getUserData(ErlangPsiImplUtil.ERLANG_CODE_FRAGMENT) != null;
   }
 
   public static boolean isApplicationConfigFileType(@NotNull PsiFile file) {
@@ -220,5 +227,10 @@ public class ErlangParserUtil extends GeneratedParserUtilBase {
     }
     IS_COMPREHENSION_KEY.set(builder, previousIsComprehensionValue);
     return result;
+  }
+
+  public static boolean isDot(@NotNull PsiElement position) {
+    PsiElement dot = PsiTreeUtil.prevVisibleLeaf(position);
+    return dot != null && dot.getNode().getElementType() == ErlangTypes.ERL_DOT;
   }
 }

@@ -191,8 +191,9 @@ public class ErlangCompletionContributor extends CompletionContributor {
             }
           }
           if (colonQualified == null
-            && grandPa instanceof ErlangExpression
-            && (inFunction(position) || inConsole || PsiTreeUtil.getParentOfType(position, ErlangTypedRecordFields.class) != null)) {
+              && !isDot(position)
+              && (grandPa instanceof ErlangExpression || ErlangParserUtil.isCodeFragment(file))
+              && (inFunction(position) || inConsole || PsiTreeUtil.getParentOfType(position, ErlangTypedRecordFields.class) != null)) {
             result.addAllElements(getFunctionLookupElements(file, false, null));
             result.addAllElements(getAllExportedFunctionsWithModuleLookupElements(file.getProject(), false, null));
           }

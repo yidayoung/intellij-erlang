@@ -35,6 +35,7 @@ public class ErlangRemoteDebugConfigurationEditorForm extends ErlangDebuggableRu
   private JTextField myHostTextField;
   private JLabel myHostLabel;
   private JTextField myDebugNodeArgsTextField;
+  private JComboBox<String> myInterpretScope;
 
   public ErlangRemoteDebugConfigurationEditorForm() {
     myUseShortNamesCheckBox.addItemListener(e -> setUseShortNames(myUseShortNamesCheckBox.isSelected()));
@@ -42,6 +43,7 @@ public class ErlangRemoteDebugConfigurationEditorForm extends ErlangDebuggableRu
 
   @Override
   protected void doResetEditorFrom(ErlangRemoteDebugRunConfiguration configuration) {
+    myModuleComboBox.allowEmptySelection("all project");
     myModuleComboBox.fillModules(configuration.getProject(), ErlangModuleType.getInstance());
     myModuleComboBox.setSelectedModule(configuration.getConfigurationModule().getModule());
     myNodeTextField.setText(configuration.getRemoteErlangNodeName());
@@ -50,6 +52,7 @@ public class ErlangRemoteDebugConfigurationEditorForm extends ErlangDebuggableRu
     myHostTextField.setText(configuration.getHost());
     myDebugNodeArgsTextField.setText(configuration.getDebugNodeArgs());
     setUseShortNames(myUseShortNamesCheckBox.isSelected());
+    myInterpretScope.setSelectedIndex(configuration.getInterpretScope());
   }
 
   @Override
@@ -60,6 +63,7 @@ public class ErlangRemoteDebugConfigurationEditorForm extends ErlangDebuggableRu
     configuration.setUseShortNames(myUseShortNamesCheckBox.isSelected());
     configuration.setHost(myHostTextField.getText());
     configuration.setDebugNodeArgs(myDebugNodeArgsTextField.getText());
+    configuration.setInterpretScope(myInterpretScope.getSelectedIndex());
   }
 
   @NotNull

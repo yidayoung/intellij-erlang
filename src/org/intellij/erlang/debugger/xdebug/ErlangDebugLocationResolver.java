@@ -54,6 +54,8 @@ public class ErlangDebugLocationResolver {
   public VirtualFile resolveModuleFile(@Nullable String moduleName) {
     List<VirtualFile> virtualFiles = moduleName == null ? ContainerUtil.emptyList() :
       ErlangModuleIndex.getVirtualFilesByName(myProject, moduleName, mySessionSearchScope);
+    if (virtualFiles.isEmpty() && moduleName != null)
+      virtualFiles = ErlangModuleIndex.getVirtualFilesByName(myProject, moduleName, GlobalSearchScope.projectScope(myProject));
     return ContainerUtil.getFirstItem(virtualFiles);
   }
 

@@ -3,7 +3,7 @@
 -record(interpret_modules, {modules = []}).
 -record(run_debugger, {module, function, args = []}).
 -record(debug_remote_node, {node, cookie = nocookie}).
--record(set_breakpoint, {module, line}).
+-record(set_breakpoint, {module, line, condition}).
 -record(remove_breakpoint, {module, line}).
 -record(step_into, {pid}).
 -record(step_over, {pid}).

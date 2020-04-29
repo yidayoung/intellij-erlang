@@ -20,6 +20,7 @@ import com.ericsson.otp.erlang.*;
 import com.intellij.concurrency.AsyncFutureFactory;
 import com.intellij.concurrency.AsyncFutureResult;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.xdebugger.XSourcePosition;
 import org.intellij.erlang.debugger.node.commands.ErlangDebuggerCommandsProducer;
 import org.intellij.erlang.debugger.node.events.ErlangDebuggerEvent;
 import org.jetbrains.annotations.NotNull;
@@ -77,12 +78,16 @@ public class ErlangDebuggerNode {
     return myStopped.get();
   }
 
+  public OtpErlangPid getLastSuspendedPid() {
+    return myLastSuspendedPid;
+  }
+
   public void processSuspended(OtpErlangPid pid) {
     myLastSuspendedPid = pid;
   }
 
-  public void setBreakpoint(@NotNull String module, int line) {
-    addCommand(ErlangDebuggerCommandsProducer.getSetBreakpointCommand(module, line));
+  public void setBreakpoint(@NotNull String module, int line, String conditionExpression) {
+    addCommand(ErlangDebuggerCommandsProducer.getSetBreakpointCommand(module, line, conditionExpression));
   }
 
   public void removeBreakpoint(@NotNull String module, int line) {
@@ -117,8 +122,10 @@ public class ErlangDebuggerNode {
     addCommand(ErlangDebuggerCommandsProducer.getContinueCommand(myLastSuspendedPid));
   }
 
-  public void evaluate(@NotNull String expression, @NotNull ErlangTraceElement traceElement) {
-    addCommand(ErlangDebuggerCommandsProducer.getEvaluateCommand(myLastSuspendedPid, expression, traceElement));
+  public void evaluate(@NotNull String expression,
+                       @NotNull ErlangTraceElement traceElement,
+                       @Nullable XSourcePosition expressionPosition) {
+    addCommand(ErlangDebuggerCommandsProducer.getEvaluateCommand(myLastSuspendedPid, expression, traceElement, expressionPosition));
   }
 
   private void addCommand(ErlangDebuggerCommandsProducer.ErlangDebuggerCommand command) {

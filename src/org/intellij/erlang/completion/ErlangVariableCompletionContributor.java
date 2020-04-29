@@ -27,7 +27,9 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ProcessingContext;
 import org.intellij.erlang.ErlangTypes;
 import org.intellij.erlang.icons.ErlangIcons;
+import org.intellij.erlang.parser.ErlangParserUtil;
 import org.intellij.erlang.psi.*;
+import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.psi.impl.ErlangVarProcessor;
 import org.intellij.erlang.psi.impl.ResolveUtil;
 import org.intellij.erlang.types.ErlangExpressionType;
@@ -59,12 +61,13 @@ public class ErlangVariableCompletionContributor extends CompletionContributor i
           }
         }
 
-        if (!(position.getParent() instanceof ErlangRecordExpression)) {
+        if (!(position.getParent() instanceof ErlangRecordExpression) && !ErlangParserUtil.isDot(position)) {
           Collection<String> vars = new HashSet<>();
-
-          PsiElement scopeOwner = PsiTreeUtil.getParentOfType(position,
+          PsiElement mayRealContext = position.getContainingFile().getOriginalFile().getUserData(ErlangPsiImplUtil.ERLANG_CODE_FRAGMENT_CONTEXT_BY);
+          PsiElement findByElement = mayRealContext != null ? mayRealContext : position;
+          PsiElement scopeOwner = PsiTreeUtil.getParentOfType(findByElement,
             ErlangFunctionClause.class, ErlangMacrosDefinition.class, ErlangTypeDefinition.class, ErlangSpecification.class);
-          ResolveUtil.treeWalkUp(position, new MyBaseScopeProcessor(vars, position, scopeOwner, false));
+          ResolveUtil.treeWalkUp(findByElement, new MyBaseScopeProcessor(vars, findByElement, scopeOwner, false));
 
           ErlangModule module = file.getModule();
           if (module != null) {

@@ -138,7 +138,7 @@ public final class ErlangSourcePosition {
 
   @Nullable
   public static ErlangSourcePosition create(@NotNull ErlangDebugLocationResolver resolver, @NotNull ErlangTraceElement traceElement) {
-    return create(resolver, traceElement.getModule(), traceElement.getFunction(), traceElement.getFunctionArgs().arity());
+    return create(resolver, traceElement.getModule(), traceElement.getLine());
   }
 
   @Nullable

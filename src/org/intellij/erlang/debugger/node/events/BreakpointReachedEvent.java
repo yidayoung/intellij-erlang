@@ -34,13 +34,14 @@ import static org.intellij.erlang.debugger.node.events.OtpErlangTermUtil.*;
 class BreakpointReachedEvent extends ErlangDebuggerEvent {
   public static final String NAME = "breakpoint_reached";
 
-  private final OtpErlangPid myActivePid;
+  @Nullable
+  private OtpErlangPid myActivePid;
   private final List<ErlangProcessSnapshot> mySnapshots;
 
   public BreakpointReachedEvent(OtpErlangTuple breakpointReachedMessage) throws DebuggerEventFormatException {
     OtpErlangPid activePid = getPidValue(elementAt(breakpointReachedMessage, 1));
     OtpErlangList snapshots = getListValue(elementAt(breakpointReachedMessage, 2));
-    if (activePid == null || snapshots == null) throw new DebuggerEventFormatException();
+    if (snapshots == null) throw new DebuggerEventFormatException();
 
     myActivePid = activePid;
     mySnapshots = new ArrayList<>(snapshots.arity());
@@ -48,7 +49,7 @@ class BreakpointReachedEvent extends ErlangDebuggerEvent {
       OtpErlangTuple snapshotTuple = getTupleValue(snapshot); // {Pid, Function, Status, Info, Stack}
 
       OtpErlangPid pid = getPidValue(elementAt(snapshotTuple, 0));
-      ErlangTraceElement init = getTraceElement(getTupleValue(elementAt(snapshotTuple, 1)), null, null);
+      ErlangTraceElement init = getTraceElement(getTupleValue(elementAt(snapshotTuple, 1)), null, null, null);
       String status = getAtomText(elementAt(snapshotTuple, 2));
       OtpErlangObject info = elementAt(snapshotTuple, 3);
       List<ErlangTraceElement> stack = getStack(getListValue(elementAt(snapshotTuple, 4)));
@@ -76,7 +77,16 @@ class BreakpointReachedEvent extends ErlangDebuggerEvent {
 
   @Override
   public void process(@NotNull ErlangDebuggerNode debuggerNode, @NotNull ErlangDebuggerEventListener eventListener) {
-    debuggerNode.processSuspended(myActivePid);
+    OtpErlangPid lastSuspendedPid = debuggerNode.getLastSuspendedPid();
+    ErlangProcessSnapshot suspendedSnap = ContainerUtil.find(mySnapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(lastSuspendedPid));
+    if (suspendedSnap != null && myActivePid != null) {
+      // if not sync message(myActivePid != null) andalso snaps do not have last pid snap, means we should change suspend pid
+      myActivePid = suspendedSnap.getPid();
+      debuggerNode.processSuspended(myActivePid);
+    }
+    else {
+      myActivePid = mySnapshots.get(0).getPid();
+    }
     eventListener.breakpointReached(myActivePid, mySnapshots);
   }
 
@@ -86,10 +96,11 @@ class BreakpointReachedEvent extends ErlangDebuggerEvent {
     List<ErlangTraceElement> stack = new ArrayList<>(traceElementsList.arity());
     for (OtpErlangObject traceElementObject : traceElementsList) {
       OtpErlangTuple traceElementTuple = getTupleValue(traceElementObject);
-      OtpErlangObject stackPointer = getTupleValue(elementAt(traceElementTuple, 0));
+      Integer stackPointer = getIntegerValue(elementAt(traceElementTuple, 0));
       OtpErlangTuple moduleFunctionArgsTuple = getTupleValue(elementAt(traceElementTuple, 1));
-      OtpErlangList bindingsList = getListValue(elementAt(traceElementTuple, 2));
-      ErlangTraceElement traceElement = getTraceElement(moduleFunctionArgsTuple, stackPointer, bindingsList);
+      OtpErlangTuple stackFrameTuple = getTupleValue(elementAt(traceElementTuple, 2));
+      OtpErlangList bindingsList = getListValue(elementAt(traceElementTuple, 3));
+      ErlangTraceElement traceElement = getTraceElement(moduleFunctionArgsTuple, stackPointer, stackFrameTuple, bindingsList);
       if (traceElement == null) return null;
       stack.add(traceElement);
     }
@@ -98,14 +109,17 @@ class BreakpointReachedEvent extends ErlangDebuggerEvent {
 
   @Nullable
   private static ErlangTraceElement getTraceElement(@Nullable OtpErlangTuple moduleFunctionArgsTuple,
-                                                    @Nullable OtpErlangObject stackPointer,
+                                                    @Nullable Integer stackPointer,
+                                                    @Nullable OtpErlangTuple stackFrameTuple,
                                                     @Nullable OtpErlangList bindingsList) {
     String moduleName = getAtomText(elementAt(moduleFunctionArgsTuple, 0));
     String functionName = getAtomText(elementAt(moduleFunctionArgsTuple, 1));
     OtpErlangList args = getListValue(elementAt(moduleFunctionArgsTuple, 2));
+    Integer line = getIntegerValue(elementAt(stackFrameTuple, 1));
+    line = line == null ? 0 : line - 1;
     Collection<ErlangVariableBinding> bindings = getBindings(bindingsList);
     if (moduleName == null || functionName == null || args == null) return null; // bindings are not necessarily present
-    return new ErlangTraceElement(stackPointer, moduleName, functionName, args, bindings);
+    return new ErlangTraceElement(stackPointer, moduleName, functionName, args, bindings, line);
   }
 
   @NotNull

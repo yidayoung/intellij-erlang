@@ -64,6 +64,7 @@ public class ErlangKeywordsCompletionContributor extends CompletionContributor i
         PsiFile file = parameters.getOriginalFile();
         if (ErlangParserUtil.isApplicationConfigFileType(file)) return;
         PsiElement position = parameters.getPosition();
+        if (ErlangParserUtil.isDot(position)) return;
         if (PsiTreeUtil.getParentOfType(position, ErlangExport.class, ErlangColonQualifiedExpression.class, ErlangStringLiteral.class, PsiComment.class) != null) return;
         for (String keyword : suggestKeywords(position)) {
           result.addElement(createKeywordLookupElement(keyword));
@@ -75,12 +76,16 @@ public class ErlangKeywordsCompletionContributor extends CompletionContributor i
   @NotNull
   private static Collection<String> suggestKeywords(@NotNull PsiElement position) {
     TextRange posRange = position.getTextRange();
-    ErlangFile posFile = (ErlangFile) position.getContainingFile();
+    PsiFile posFile = position.getContainingFile();
     TextRange range = new TextRange(0, posRange.getStartOffset());
     String text = range.isEmpty() ? CompletionInitializationContext.DUMMY_IDENTIFIER : range.substring(posFile.getText());
+    int completionOffset = posRange.getStartOffset() - range.getStartOffset();
+    if (ErlangParserUtil.isCodeFragment(posFile)){
+      text = "-module(a). a()->";
+      completionOffset = text.length();
+    }
 
     PsiFile file = PsiFileFactory.getInstance(posFile.getProject()).createFileFromText("a.erl", ErlangLanguage.INSTANCE, text, true, false);
-    int completionOffset = posRange.getStartOffset() - range.getStartOffset();
     ErlangParserUtil.CompletionState state = new ErlangParserUtil.CompletionState(completionOffset) {
       @Override
       public String convertItem(Object o) {

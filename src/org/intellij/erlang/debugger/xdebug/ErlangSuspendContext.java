@@ -28,6 +28,8 @@ import java.util.List;
 public class ErlangSuspendContext extends XSuspendContext {
   private final XExecutionStack[] myExecutionStacks;
   private final int myActiveStackIdx;
+  private final OtpErlangPid myActivePid;
+  private int myBreakLine = 0;
 
   public ErlangSuspendContext(@NotNull ErlangXDebugProcess debugProcess,
                               @NotNull OtpErlangPid activePid,
@@ -39,9 +41,11 @@ public class ErlangSuspendContext extends XSuspendContext {
       if (snapshot.getPid().equals(activePid)) {
         activeStackIdx = i;
       }
+      myBreakLine = snapshot.getBreakLine();
       myExecutionStacks[i] = new ErlangExecutionStack(debugProcess, snapshot);
     }
     myActiveStackIdx = activeStackIdx;
+    myActivePid = activePid;
   }
 
   @Override
@@ -53,5 +57,13 @@ public class ErlangSuspendContext extends XSuspendContext {
   @Override
   public XExecutionStack getActiveExecutionStack() {
     return myExecutionStacks[myActiveStackIdx];
+  }
+
+  public OtpErlangPid getActivePid() {
+    return myActivePid;
+  }
+
+  public int getBreakLine() {
+    return myBreakLine;
   }
 }

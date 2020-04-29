@@ -37,7 +37,7 @@ do_get_stackframes(Pid) ->
   case dbg_iserver:safe_call({get_meta, Pid}) of
     {ok, MetaPid} ->
       Stack = int:meta(MetaPid, backtrace, all),
-      [{SP, TraceElement, get_bindings(MetaPid, SP)} || {SP, TraceElement} <- Stack];
+      lists:reverse(get_stack_frame(MetaPid, Stack));
     Error ->
       io:format("Failed to obtain meta pid for ~p: ~p~n", [Pid, Error]),
       []
@@ -45,3 +45,14 @@ do_get_stackframes(Pid) ->
 
 get_bindings(MetaPid, SP) ->
   int:meta(MetaPid, bindings, SP).
+
+
+get_stack_frame(MetaPid, [{SP, MFA}|Left]=_Stack) ->
+  get_stack_frame2(MetaPid, Left, [{SP, MFA, MFA, get_bindings(MetaPid, SP)}]).
+
+get_stack_frame2(MetaPid, [{SP, MFA}|Left]=_Stack, Acc) ->
+  {_SP2, Fun, Bindings} = int:meta(MetaPid, stack_frame, {up, SP+1}),
+  get_stack_frame2(MetaPid, Left, [{SP, MFA, Fun, Bindings}|Acc]);
+get_stack_frame2(_MetaPid, []=_Stack, Acc) ->
+  Acc.
+

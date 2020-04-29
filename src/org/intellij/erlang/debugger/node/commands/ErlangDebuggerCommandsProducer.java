@@ -18,6 +18,7 @@ package org.intellij.erlang.debugger.node.commands;
 
 import com.ericsson.otp.erlang.*;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.xdebugger.XSourcePosition;
 import org.intellij.erlang.debugger.node.ErlangTraceElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,8 +30,10 @@ public final class ErlangDebuggerCommandsProducer {
   }
 
   @NotNull
-  public static ErlangDebuggerCommand getSetBreakpointCommand(@NotNull String module, int line) {
-    return new SetBreakpointCommand(module, line);
+  public static ErlangDebuggerCommand getSetBreakpointCommand(@NotNull String module,
+                                                              int line,
+                                                              String conditionExpression) {
+    return new SetBreakpointCommand(module, line, conditionExpression);
   }
 
   @NotNull
@@ -74,8 +77,11 @@ public final class ErlangDebuggerCommandsProducer {
   }
 
   @NotNull
-  public static ErlangDebuggerCommand getEvaluateCommand(@NotNull OtpErlangPid pid, @NotNull String expression, @NotNull ErlangTraceElement traceElement) {
-    return new EvaluateCommand(pid, expression, traceElement);
+  public static ErlangDebuggerCommand getEvaluateCommand(@NotNull OtpErlangPid pid,
+                                                         @NotNull String expression,
+                                                         @NotNull ErlangTraceElement traceElement,
+                                                         @Nullable XSourcePosition expressionPosition) {
+    return new EvaluateCommand(pid, expression, traceElement, expressionPosition);
   }
 
   private static class StepOverCommand extends AbstractPidCommand {
@@ -98,7 +104,7 @@ public final class ErlangDebuggerCommandsProducer {
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
-      return new OtpErlangTuple(new OtpErlangObject[] {
+      return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("run_debugger"),
         new OtpErlangAtom(myModule),
         new OtpErlangAtom(myFunction),
@@ -110,10 +116,13 @@ public final class ErlangDebuggerCommandsProducer {
   private static class SetBreakpointCommand implements ErlangDebuggerCommand {
     private final String myModule;
     private final int myLine;
+    private final String myCondition;
 
-    SetBreakpointCommand(@NotNull String module, int line) {
+    SetBreakpointCommand(@NotNull String module, int line, String conditionExpression) {
       myModule = module;
       myLine = line + 1;
+      myCondition = conditionExpression;
+
     }
 
     @NotNull
@@ -122,7 +131,8 @@ public final class ErlangDebuggerCommandsProducer {
       return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("set_breakpoint"),
         new OtpErlangAtom(myModule),
-        new OtpErlangInt(myLine)
+        new OtpErlangInt(myLine),
+        new OtpErlangString(myCondition)
       });
     }
   }
@@ -175,7 +185,7 @@ public final class ErlangDebuggerCommandsProducer {
       for (int i = 0; i < myModuleSourcePaths.size(); i++) {
         moduleSourcePaths[i] = new OtpErlangString(myModuleSourcePaths.get(i));
       }
-      return new OtpErlangTuple(new OtpErlangObject[] {
+      return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("interpret_modules"),
         new OtpErlangList(moduleSourcePaths)
       });
@@ -194,7 +204,7 @@ public final class ErlangDebuggerCommandsProducer {
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
-      return new OtpErlangTuple(new OtpErlangObject[] {
+      return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("debug_remote_node"),
         new OtpErlangAtom(myNodeName),
         new OtpErlangAtom(myCookie)
@@ -214,7 +224,7 @@ public final class ErlangDebuggerCommandsProducer {
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
-      return new OtpErlangTuple(new OtpErlangObject[] {
+      return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("remove_breakpoint"),
         new OtpErlangAtom(myModule),
         new OtpErlangInt(myLine)
@@ -225,28 +235,34 @@ public final class ErlangDebuggerCommandsProducer {
   private static class EvaluateCommand implements ErlangDebuggerCommand {
     private final OtpErlangPid myPid;
     private final String myExpression;
-    private final ErlangTraceElement myTraceElement;
+    private final int myStackPointer;
 
-    public EvaluateCommand(@NotNull OtpErlangPid pid, @NotNull String expression, @NotNull ErlangTraceElement traceElement) {
+    public EvaluateCommand(@NotNull OtpErlangPid pid,
+                           @NotNull String expression,
+                           @NotNull ErlangTraceElement traceElement,
+                           @Nullable XSourcePosition expressionPosition) {
       myPid = pid;
       myExpression = expression;
-      myTraceElement = traceElement;
+
+      if (expressionPosition == null) {
+        myStackPointer = traceElement.getStackPointer() == null ? 0 : traceElement.getStackPointer();
+      }
+      else {
+        // 0 will transform to top
+        myStackPointer = 0;
+      }
     }
 
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
-      OtpErlangObject stackPointer = myTraceElement.getStackPointer();
-      if (stackPointer == null) {
-        stackPointer = new OtpErlangAtom("undefined");
-      }
-
-      return new OtpErlangTuple(new OtpErlangObject[] {
+      return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("evaluate"),
         myPid,
         new OtpErlangList(myExpression),
-        stackPointer
-      });
+        new OtpErlangInt(myStackPointer),
+
+        });
     }
   }
 

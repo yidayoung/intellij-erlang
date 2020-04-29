@@ -63,7 +63,7 @@ public class ErlangStackFrame extends XStackFrame {
       public void evaluate(@NotNull String expression,
                            @NotNull XEvaluationCallback callback,
                            @Nullable XSourcePosition expressionPosition) {
-        myDebugProcess.evaluateExpression(expression, callback, myTraceElement);
+        myDebugProcess.evaluateExpression(expression, callback, myTraceElement, expressionPosition);
       }
     };
   }
