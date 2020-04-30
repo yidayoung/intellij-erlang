@@ -43,7 +43,6 @@ public class ErlangRemoteDebugConfigurationEditorForm extends ErlangDebuggableRu
 
   @Override
   protected void doResetEditorFrom(ErlangRemoteDebugRunConfiguration configuration) {
-    myModuleComboBox.allowEmptySelection("all project");
     myModuleComboBox.fillModules(configuration.getProject(), ErlangModuleType.getInstance());
     myModuleComboBox.setSelectedModule(configuration.getConfigurationModule().getModule());
     myNodeTextField.setText(configuration.getRemoteErlangNodeName());
