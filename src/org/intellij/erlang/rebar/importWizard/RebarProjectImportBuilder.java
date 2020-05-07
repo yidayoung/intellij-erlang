@@ -41,7 +41,6 @@ import com.intellij.openapi.vfs.newvfs.impl.VirtualDirectoryImpl;
 import com.intellij.packaging.artifacts.ModifiableArtifactModel;
 import com.intellij.projectImport.ProjectImportBuilder;
 import com.intellij.util.containers.ContainerUtil;
-import com.intellij.util.io.URLUtil;
 import org.intellij.erlang.configuration.ErlangCompilerSettings;
 import org.intellij.erlang.facet.ErlangFacet;
 import org.intellij.erlang.facet.ErlangFacetConfiguration;
@@ -75,6 +74,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
   @NotNull
   private String myRebarPath = "";
   private boolean myIsImportingProject;
+
+  private final String REBAR3_BUILD_LIB_PATH = "_build" + File.separator + "default" + File.separator + "lib";
 
   @NotNull
   @NonNls
@@ -141,14 +142,26 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild("_build");
     }
 
+    VirtualFile rootRebar = myProjectRoot.findChild("rebar.config");
+    if (rootRebar == null){
+      Messages.showErrorDialog("no rebar.config in root", "Rebar Project Import");
+      return false;
+    }
+
+    boolean isRebar3 = (null != myProjectRoot.findChild("_build"));
     ProgressManager.getInstance().run(new Task.Modal(getCurrentProject(), "Scanning Rebar Projects", true) {
       public void run(@NotNull final ProgressIndicator indicator) {
-        VirtualFile RootRebar = myProjectRoot.findChild("rebar.config");
-        assert RootRebar != null : "no rebar.config in root";
-        boolean isRebar3 = null != myProjectRoot.findChild("_build");
         rootApp = new ImportedOtpApp(projectRoot, isRebar3);
         final LinkedHashSet<ImportedOtpApp> depsOtpApps = getDepsImportedOtpApps(indicator, projectRoot);
         myFoundOtpApps = new ArrayList<>(depsOtpApps);
+        if (isRebar3) {
+          VirtualFile appPath = LocalFileSystem.getInstance().findFileByPath(projectRoot.getPath() + File.separator + "apps");
+          if (appPath != null) {
+            final LinkedHashSet<ImportedOtpApp> rootApps = getRootImportedOtpApps(indicator, appPath);
+            ContainerUtil.addAllNotNull(myFoundOtpApps, rootApps);
+          }
+        }
+
       }
     });
 
@@ -159,7 +172,6 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       }
       return compareByParentPath;
     });
-//    myFoundOtpApps.add(0, rootApp);
     ContainerUtil.addIfNotNull(myFoundOtpApps, rootApp);
     mySelectedOtpApps = new ArrayList<>(myFoundOtpApps);
     return !myFoundOtpApps.isEmpty();
@@ -171,12 +183,11 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     String depsDir = getDepsDir(projectRoot);
     VirtualFile depsRoot = LocalFileSystem.getInstance().findFileByPath(depsDir);
     assert myProjectRoot != null;
-
-
     final LinkedHashSet<ImportedOtpApp> importedOtpApps = new LinkedHashSet<>();
-
-    assert depsRoot != null: "deps dir can't find, _build/default/lib or deps";
-    VfsUtilCore.visitChildrenRecursively(depsRoot, new VirtualFileVisitor(VirtualFileVisitor.SKIP_ROOT) {
+    if (depsRoot == null){
+      return importedOtpApps;
+    }
+    VfsUtilCore.visitChildrenRecursively(depsRoot, new VirtualFileVisitor<Void>(VirtualFileVisitor.SKIP_ROOT) {
       @Override
       public boolean visitFile(@NotNull VirtualFile file) {
         indicator.checkCanceled();
@@ -184,8 +195,9 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         if (file.isDirectory()) {
           indicator.setText2(file.getPath());
           if (isExamplesDirectory(file) || isRelDirectory(projectRoot.getPath(), file.getPath())) return false;
-//          if (rootApp.getApps().contains(file.getName()))
-//            return false;
+          if (rootApp.getApps().contains(file.getName())) {
+            return false;
+          }
         }
 
         ContainerUtil.addAllNotNull(importedOtpApps, createImportedOtpApp(file, rootApp.getIsRebar3()));
@@ -200,7 +212,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
                                                                @NotNull VirtualFile appRoot) {
 
     final LinkedHashSet<ImportedOtpApp> importedOtpApps = new LinkedHashSet<>();
-    VfsUtilCore.visitChildrenRecursively(appRoot, new VirtualFileVisitor(VirtualFileVisitor.SKIP_ROOT) {
+    VfsUtilCore.visitChildrenRecursively(appRoot, new VirtualFileVisitor<Void>(VirtualFileVisitor.SKIP_ROOT) {
       @Override
       public boolean visitFile(@NotNull VirtualFile file) {
         indicator.checkCanceled();
@@ -258,7 +270,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       try {
         deleteIdeaModuleFiles(mySelectedOtpApps);
         return true;
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         LOG.error(e);
         return false;
       }
@@ -282,6 +295,9 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     final List<ModifiableRootModel> createdRootModels = new ArrayList<>();
     final ModifiableModuleModel obtainedModuleModel =
       moduleModel != null ? moduleModel : ModuleManager.getInstance(project).getModifiableModel();
+    assert myProjectRoot != null;
+    String moduleLibDirUrl = VfsUtilCore.pathToUrl(myProjectRoot.getPath() + File.separator + REBAR3_BUILD_LIB_PATH);
+
     for (ImportedOtpApp importedOtpApp : mySelectedOtpApps) {
       VirtualFile ideaModuleDir = importedOtpApp.getRoot();
       String ideaModuleDirPath = ideaModuleDir.getCanonicalPath();
@@ -302,21 +318,26 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         // Exclude standard folders
         excludeDirFromContent(content, ideaModuleDir, "doc");
         excludeDirFromContent(content, ideaModuleDir, ".rebar3");
-        if (rootApp.getApps().contains(importedOtpApp.getName()))
-        // if is apps link
-        {
-          excludeDirFromContent(content, ideaModuleDir, "src");
-          excludeDirFromContent(content, ideaModuleDir, "include");
+        if (rootApp == importedOtpApp){
+          for (String appName : rootApp.getApps()){
+            excludeDirFromContent(content, moduleLibDirUrl + File.separator + appName);
+          }
         }
         // Initialize output paths according to Rebar conventions.
         CompilerModuleExtension compilerModuleExt = rootModel.getModuleExtension(CompilerModuleExtension.class);
         compilerModuleExt.inheritCompilerOutputPath(false);
-        compilerModuleExt.setCompilerOutputPath(ideaModuleDir + File.separator + "ebin");
-        compilerModuleExt.setCompilerOutputPathForTests(ideaModuleDir + File.separator + ".eunit");
+
+        compilerModuleExt.setCompilerOutputPath(moduleLibDirUrl
+                                                + File.separator + importedOtpApp.getName()
+                                                + File.separator + "ebin");
+        compilerModuleExt.setCompilerOutputPathForTests(moduleLibDirUrl
+                                                        + File.separator + importedOtpApp.getName()
+                                                        + File.separator + ".eunit");
 
         createdRootModels.add(rootModel);
         // Set inter-module dependencies
-        resolveModuleDeps(rootModel, importedOtpApp, projectSdk, selectedAppNames);
+        Set<String> unResolveModules = resolveModuleDeps(rootModel, importedOtpApp, projectSdk, selectedAppNames);
+        Messages.showWarningDialog(String.format("Module %s has modules not find:",importedOtpApp.getName())+unResolveModules, "Rebar Import");
       }
     }
     // Commit project structure.
@@ -385,6 +406,13 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     VirtualFile excludeDirFile = root.findChild(excludeDir);
     if (excludeDirFile != null) {
       content.addExcludeFolder(excludeDirFile);
+    }
+  }
+
+  private static void excludeDirFromContent(ContentEntry content, String excludeDir) {
+    if (excludeDir != null)
+    {
+      content.addExcludeFolder(excludeDir);
     }
   }
 
@@ -459,7 +487,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
             try {
               ideaModuleFile.delete(this);
               importedOtpApp.setIdeaModuleFile(null);
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
               ex[0] = e;
             }
           }
@@ -502,10 +531,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       if (allImportedAppNames.contains(depAppName)) {
         rootModel.addInvalidModuleEntry(depAppName);
       }
-      else if (projectSdk != null && isSdkOtpApp(depAppName, projectSdk)) {
-        // SDK is already a dependency
-      }
-      else {
+      else if (projectSdk == null || !isSdkOtpApp(depAppName, projectSdk)) {
         rootModel.addInvalidModuleEntry(depAppName);
         unresolvedAppNames.add(depAppName);
       }

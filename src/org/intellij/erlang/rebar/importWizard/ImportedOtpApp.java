@@ -74,25 +74,24 @@ final class ImportedOtpApp {
       addPath(myRoot, "include", myIncludePaths);
       if (isRebar3) {
         myName = root.getName();
-        VfsUtilCore.visitChildrenRecursively(appDir, new VirtualFileVisitor() {
-          @Override
-          public boolean visitFile(@NotNull VirtualFile file) {
-            if (file.isDirectory()) {
-              VirtualFile appResourceFile = findAppResourceFile(file);
-              if (appResourceFile != null) {
-                addDependenciesFromAppFile(appResourceFile);
-                String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
-                myApps.add(appName);
-                myDeps.add(appName);
-                addPath(file, "src", mySourcePaths);
-                addPath(file, "test", myTestPaths);
-                addPath(file, "include", myIncludePaths);
+        if (appDir != null) {
+          VfsUtilCore.visitChildrenRecursively(appDir, new VirtualFileVisitor<Void>() {
+            @Override
+            public boolean visitFile(@NotNull VirtualFile file) {
+              if (file.isDirectory()) {
+                VirtualFile appResourceFile = findAppResourceFile(file);
+                if (appResourceFile != null) {
+                  addDependenciesFromAppFile(appResourceFile);
+                  String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
+                  myApps.add(appName);
+                  myDeps.add(appName);
+                }
+                return true;
               }
               return true;
             }
-            return true;
-          }
-        });
+          });
+        }
       }
       else {
         VirtualFile appResourceFile = findAppResourceFile(myRoot);
@@ -275,9 +274,6 @@ final class ImportedOtpApp {
     return myApps;
   }
 
-  public VirtualFile getAppDir() {
-    return appDir;
-  }
 
   public Boolean getIsRebar3() {
     return myIsRebar3;
