@@ -59,6 +59,7 @@ import org.intellij.erlang.bif.ErlangBifDescriptor;
 import org.intellij.erlang.bif.ErlangBifTable;
 import org.intellij.erlang.completion.ErlangCompletionContributor;
 import org.intellij.erlang.completion.QuoteInsertHandler;
+import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.debugger.xdebug.ErlangExprCodeFragment;
 import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.index.ErlangApplicationIndex;
@@ -70,6 +71,7 @@ import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.sdk.ErlangSdkRelease;
 import org.intellij.erlang.sdk.ErlangSdkType;
 import org.intellij.erlang.stubs.*;
+import org.intellij.erlang.utils.ErlangModulesUtil;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -160,9 +162,14 @@ public class ErlangPsiImplUtil {
     List<ErlangTypedExpr> result = new SmartList<>();
     List<ErlangQAtom> atoms = new SmartList<>();
     ErlangRecordExpression recordExpression = PsiTreeUtil.getParentOfType(element, ErlangRecordExpression.class);
-    PsiReference reference = recordExpression != null ? recordExpression.getReferenceInternal() : null;
-    PsiElement resolve = reference != null ? reference.resolve() : null;
-
+    PsiElement resolve;
+    if (recordExpression != null && ErlangParserUtil.isConsole(element.getContainingFile().getOriginalFile())) {
+      resolve = getRecordInConsole(element, atoms, recordExpression);
+    }
+    else {
+      PsiReference reference = recordExpression != null ? recordExpression.getReferenceInternal() : null;
+      resolve = reference != null ? reference.resolve() : null;
+    }
     if (resolve == null && recordExpression != null) {
       ErlangMacros macros = recordExpression.getMacros();
       PsiReference macrosReference = macros != null ? macros.getReference() : null;
@@ -214,7 +221,35 @@ public class ErlangPsiImplUtil {
     return Pair.create(result, atoms);
   }
 
-   // for #149: Nitrogen support
+  @Nullable
+  private static PsiElement getRecordInConsole(PsiElement element,
+                                               List<ErlangQAtom> atoms,
+                                               ErlangRecordExpression recordExpression) {
+    PsiElement resolve = null;
+    PsiFile file = element.getContainingFile().getOriginalFile();
+    Project project = file.getProject();
+    ErlangFile user_default = ErlangModulesUtil.getErlangModuleFile(project, "user_default", GlobalSearchScope.allScope(project));
+    if (recordExpression != null && recordExpression.getRecordRef() != null) {
+      String recordName = recordExpression.getRecordRef().getText();
+      if (recordName != null && user_default != null){
+        List<ErlangRecordDefinition> records = getErlangRecordFromIncludes(user_default, false, recordName);
+        resolve = records.get(0);
+      }
+      Map<String, List<ErlangExpression>> records = file.getOriginalFile().getUserData(ErlangConsoleView.ERLANG_RECORD_CONTEXT);
+      if (records != null) {
+        List<ErlangExpression> erlangExpressions = records.get(recordName);
+        for (ErlangExpression expression:erlangExpressions){
+          if (expression instanceof ErlangMaxExpression) {
+            ErlangQAtom qAtom = ((ErlangMaxExpression) expression).getQAtom();
+            ContainerUtil.addIfNotNull(atoms, qAtom);
+          }
+        }
+      }
+    }
+    return resolve;
+  }
+
+  // for #149: Nitrogen support
   private static void processRecordFields(@NotNull ErlangMacros macros, @NotNull List<ErlangQAtom> atoms) {
     PsiReference psiReference = macros.getReference();
     PsiElement macrosDefinition = psiReference != null ? psiReference.resolve() : null;
@@ -868,12 +903,17 @@ public class ErlangPsiImplUtil {
   @NotNull
   public static List<LookupElement> getRecordLookupElements(@NotNull PsiFile containingFile) {
     if (containingFile instanceof ErlangFile) {
-      List<ErlangRecordDefinition> concat = ContainerUtil.concat(((ErlangFile) containingFile).getRecords(), getErlangRecordFromIncludes((ErlangFile) containingFile, true, ""));
+      List<ErlangRecordDefinition> concat = getErlangRecordDefinitions((ErlangFile) containingFile);
       return ContainerUtil.map(
         concat,
         rd -> LookupElementBuilder.create(rd).withIcon(ErlangIcons.RECORD));
     }
     return Collections.emptyList();
+  }
+
+  @NotNull
+  public static List<ErlangRecordDefinition> getErlangRecordDefinitions(@NotNull ErlangFile containingFile) {
+    return ContainerUtil.concat(containingFile.getRecords(), getErlangRecordFromIncludes(containingFile, true, ""));
   }
 
   @NotNull

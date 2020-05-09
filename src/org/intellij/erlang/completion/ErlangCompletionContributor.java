@@ -48,6 +48,7 @@ import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.JBIterable;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.ErlangTypes;
+import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.formatter.settings.ErlangCodeStyleSettings;
 import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.index.ErlangApplicationIndex;
@@ -60,6 +61,7 @@ import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.stubs.index.ErlangBehaviourModuleIndex;
 import org.intellij.erlang.types.ErlangExpressionType;
+import org.intellij.erlang.utils.ErlangModulesUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -148,6 +150,20 @@ public class ErlangCompletionContributor extends CompletionContributor {
 
         if (originalParent instanceof ErlangRecordExpression || prevIsRadix(originalPosition) || prevIsRadix(grandPa)) {
           result.addAllElements(getRecordLookupElements(file));
+          if (ErlangParserUtil.isConsole(file)){
+            Project project = file.getProject();
+            ErlangFile user_default = ErlangModulesUtil.getErlangModuleFile(project, "user_default", GlobalSearchScope.allScope(project));
+            if (user_default != null) {
+              result.addAllElements(getRecordLookupElements(user_default));
+            }
+            Map<String, List<ErlangExpression>> records = file.getOriginalFile().getUserData(ErlangConsoleView.ERLANG_RECORD_CONTEXT);
+            if (records != null) {
+              List<LookupElementBuilder> rdRecords = ContainerUtil.map(
+                records.keySet(),
+                rd -> LookupElementBuilder.create(rd).withIcon(ErlangIcons.RECORD));
+              result.addAllElements(rdRecords);
+            }
+          }
         }
         else if (grandPa instanceof ErlangExportFunction && file instanceof ErlangFile) {
           result.addAllElements(createFunctionLookupElements(((ErlangFile) file).getFunctions(), true));

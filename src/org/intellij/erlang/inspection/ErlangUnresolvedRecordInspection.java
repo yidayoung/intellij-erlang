@@ -18,15 +18,22 @@ package org.intellij.erlang.inspection;
 
 import com.intellij.codeInspection.LocalInspectionToolSession;
 import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.ProcessingContext;
-import org.intellij.erlang.psi.ErlangQAtom;
-import org.intellij.erlang.psi.ErlangRecordRef;
-import org.intellij.erlang.psi.ErlangVisitor;
+import org.intellij.erlang.console.ErlangConsoleView;
+import org.intellij.erlang.parser.ErlangParserUtil;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.quickfixes.ErlangIntroduceRecordFix;
+import org.intellij.erlang.utils.ErlangModulesUtil;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+import java.util.Map;
 
 public class ErlangUnresolvedRecordInspection extends ErlangInspectionBase {
   @NotNull
@@ -50,7 +57,22 @@ public class ErlangUnresolvedRecordInspection extends ErlangInspectionBase {
 
   private void process(@NotNull PsiElement o, @NotNull ProblemsHolder problemsHolder) {
     PsiReference ref = o.getReference();
-    if (ref == null || ref.resolve() == null) {
+    if (ErlangParserUtil.isConsole(o.getContainingFile().getOriginalFile())) {
+      PsiFile file = o.getContainingFile();
+      Project project = file.getProject();
+      ErlangFile user_default = ErlangModulesUtil.getErlangModuleFile(project, "user_default", GlobalSearchScope.allScope(project));
+      if (user_default != null) {
+        List<ErlangRecordDefinition> recordDefinitions = ErlangPsiImplUtil.getErlangRecordDefinitions(user_default);
+        for (ErlangRecordDefinition def : recordDefinitions)
+          if (def != null && def.getQAtom() != null && def.getQAtom().getText().equals(o.getText())) return;
+      }
+      Map<String, List<ErlangExpression>> records = file.getOriginalFile().getUserData(ErlangConsoleView.ERLANG_RECORD_CONTEXT);
+      if (records != null) {
+        if (records.containsKey(o.getText())) return;
+      }
+      registerProblem(problemsHolder, o, "Unresolved record " + "'" + o.getText() + "'");
+    }
+    else if (ref == null || ref.resolve() == null) {
       registerProblem(problemsHolder, o, "Unresolved record " + "'" + o.getText() + "'", new ErlangIntroduceRecordFix());
     }
   }

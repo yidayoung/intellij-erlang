@@ -23,12 +23,11 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
 import org.intellij.erlang.ErlangLanguage;
-import org.intellij.erlang.psi.ErlangFunctionCallExpression;
-import org.intellij.erlang.psi.ErlangQVar;
-import org.intellij.erlang.psi.ErlangRecursiveVisitor;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.psi.impl.ErlangVarProcessor;
 import org.jetbrains.annotations.NotNull;
@@ -38,11 +37,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class ErlangConsoleView extends LanguageConsoleImpl {
-  @Nullable private ConsoleHistoryController myHistoryController;
-  @Nullable private OutputStreamWriter myProcessInputWriter;
+  @Nullable
+  private ConsoleHistoryController myHistoryController;
+  @Nullable
+  private OutputStreamWriter myProcessInputWriter;
+  public static final Key<Map<String, List<ErlangExpression>>> ERLANG_RECORD_CONTEXT = Key.create("ERLANG_RECORD_CONTEXT");
 
   public ErlangConsoleView(@NotNull Project project) {
     super(project, "Erlang Console", ErlangLanguage.INSTANCE);
@@ -51,6 +54,7 @@ public final class ErlangConsoleView extends LanguageConsoleImpl {
     PsiFile originalFile = getFile().getOriginalFile();
     originalFile.putUserData(ErlangPsiImplUtil.ERLANG_CONSOLE, this);
     originalFile.putUserData(ErlangVarProcessor.ERLANG_VARIABLE_CONTEXT, new HashMap<>());
+    originalFile.putUserData(ERLANG_RECORD_CONTEXT, new HashMap<>());
   }
 
   @Override
@@ -91,6 +95,7 @@ public final class ErlangConsoleView extends LanguageConsoleImpl {
     String text = editorDocument.getText();
 
     final Map<String, ErlangQVar> context = getFile().getOriginalFile().getUserData(ErlangVarProcessor.ERLANG_VARIABLE_CONTEXT);
+    final Map<String, List<ErlangExpression>> recordContext = getFile().getOriginalFile().getUserData(ERLANG_RECORD_CONTEXT);
     if (context != null) { // todo: process only successful statements
       getFile().accept(new ErlangRecursiveVisitor() {
         @Override
@@ -104,6 +109,9 @@ public final class ErlangConsoleView extends LanguageConsoleImpl {
           String name = o.getNameIdentifier().getText();
           int size = o.getArgumentList().getExpressionList().size();
           if (name.equals("f") && size == 0) context.clear();
+          if (recordContext != null) {
+            checkRecords(o, name, size, recordContext);
+          }
         }
       });
     }
@@ -115,6 +123,34 @@ public final class ErlangConsoleView extends LanguageConsoleImpl {
         myProcessInputWriter.write(line + "\n");
         myProcessInputWriter.flush();
       } catch (IOException e) { // Ignore
+      }
+    }
+  }
+
+  private static void checkRecords(@NotNull ErlangFunctionCallExpression o,
+                                   String name,
+                                   int size,
+                                   Map<String, List<ErlangExpression>> recordContext) {
+    if (name.equals("rd") && size == 2) {
+      String recordName = o.getArgumentList().getExpressionList().get(0).getText();
+      ErlangExpression recordBody = o.getArgumentList().getExpressionList().get(1);
+      if (recordBody instanceof ErlangTupleExpression) {
+        List<ErlangExpression> expressionList = ((ErlangTupleExpression) recordBody).getExpressionList();
+        if (!recordContext.containsKey(recordName)) {
+          recordContext.put(recordName, expressionList);
+        }
+      }
+    }
+    if (name.equals("rf")) {
+      if (size == 0) recordContext.clear();
+      if (size == 1) {
+        String recordName = o.getArgumentList().getExpressionList().get(0).getText();
+        if (recordName.equals("_")) {
+          recordContext.clear();
+        }
+        else {
+          recordContext.remove(recordName);
+        }
       }
     }
   }
