@@ -114,7 +114,7 @@ public class ErlangApplicationConfiguration extends ErlangRunConfigurationBase<E
     ErlangRunningState.ErlangEntryPoint entryPoint = ErlangRunningState.ErlangEntryPoint.fromModuleAndFunction(myModuleAndFunction, myParams);
     if (entryPoint == null) throw new RuntimeConfigurationError("Invalid module and function entry point");
 
-    ErlangModule erlangModule = ErlangModulesUtil.getErlangModule(getProject(), entryPoint.getModuleName(), GlobalSearchScope.moduleScope(module));
+    ErlangModule erlangModule = ErlangModulesUtil.getErlangModule(getProject(), entryPoint.getModuleName(), GlobalSearchScope.moduleWithDependenciesScope(module));
     if (erlangModule == null) {
       throw new RuntimeConfigurationError("Invalid module name '" + entryPoint.getModuleName() + "'");
     }

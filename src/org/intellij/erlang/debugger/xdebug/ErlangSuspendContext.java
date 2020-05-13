@@ -40,8 +40,8 @@ public class ErlangSuspendContext extends XSuspendContext {
       ErlangProcessSnapshot snapshot = snapshots.get(i);
       if (snapshot.getPid().equals(activePid)) {
         activeStackIdx = i;
+        myBreakLine = snapshot.getBreakLine();
       }
-      myBreakLine = snapshot.getBreakLine();
       myExecutionStacks[i] = new ErlangExecutionStack(debugProcess, snapshot);
     }
     myActiveStackIdx = activeStackIdx;

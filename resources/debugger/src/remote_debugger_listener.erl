@@ -2,18 +2,18 @@
 
 % receives commands from remote debugger
 
--export([run/1, set_breakpoint/3]).
+-export([run/2, set_breakpoint/3]).
 
 -include("process_names.hrl").
 -include("remote_debugger_messages.hrl").
 -include("trace_utils.hrl").
 
--record(state, {interpreted_modules = [] :: [module()], remote_node :: node()}).
+-record(state, {remote_need_interprete_modules = [] :: [module()], remote_node :: node(), debug_root :: string()}).
 
-run(Debugger) ->
+run(Debugger, DebugRoot) ->
   register(?RDEBUG_LISTENER, self()),
   Debugger ! #register_listener{pid = self()},
-  loop(#state{}).
+  loop(#state{debug_root = DebugRoot}).
 
 loop(State) ->
   NewState = receive
@@ -33,13 +33,13 @@ handle_message(Message, State) ->
 uses_state(#interpret_modules{}) -> true;
 uses_state(#debug_remote_node{}) -> true;
 uses_state(#evaluate{}) -> true;
+uses_state(#set_breakpoint{}) -> true;
 uses_state(_Message)             -> false.
 
 process_message({interpret_modules, NewModules},
-                #state{interpreted_modules = Modules} = State) when is_list(NewModules) ->
-  interpret_modules(NewModules, State#state.remote_node),
-%%  interpret_modules(NewModules),
-  State#state{interpreted_modules = Modules ++ NewModules};
+                #state{remote_need_interprete_modules = Modules} = State) when is_list(NewModules) ->
+  LeftModules = interpret_modules(NewModules++Modules, State#state.remote_node),
+  State#state{remote_need_interprete_modules = LeftModules};
 process_message({evaluate, Pid, Expression, MaybeStackPointer}, #state{remote_node = Node}=State) when is_pid(Pid), is_list(Expression) ->
   case is_top_stack(Pid, MaybeStackPointer) of
     true ->
@@ -48,20 +48,23 @@ process_message({evaluate, Pid, Expression, MaybeStackPointer}, #state{remote_no
       evaluate2(Pid, Expression, MaybeStackPointer, Node)
   end,
   State;
-process_message({debug_remote_node, Node, Cookie}, #state{interpreted_modules = Modules} = State) ->
-  debug_remote_node(Node, Cookie, Modules), State#state{remote_node = Node}.
+process_message({debug_remote_node, Node, Cookie}, #state{remote_need_interprete_modules = Modules} = State) ->
+  debug_remote_node(Node, Cookie, Modules), State#state{remote_node = Node, remote_need_interprete_modules = []};
 
 % commands from remote debugger
-process_message({set_breakpoint, Module, Line, Condition}) when is_atom(Module),
+process_message({set_breakpoint, Module, Line, Condition}, #state{debug_root = DebugRoot}=State) when is_atom(Module),
                                                      is_integer(Line), is_list(Condition) ->
   set_breakpoint(Module, Line),
   if
     length(Condition) > 0 ->
-      ensure_condition(Condition),
+      ensure_condition(Condition, DebugRoot),
       int:test_at_break(Module, Line, {debug_condition, list_to_atom(Condition)});
     true ->
       pass
-  end;
+  end,
+  State.
+
+
 process_message({remove_breakpoint, Module, Line}) when is_atom(Module),
                                                         is_integer(Line) ->
   remove_breakpoint(Module, Line);
@@ -222,13 +225,14 @@ eval_argslist(ExprList) ->
       error
   end.
 
-debug_remote_node(Node, Cookie, _Modules) ->
+debug_remote_node(Node, Cookie, Modules) ->
   NodeConnected = connect_to_remote_node(Node, Cookie),
   Status = if
     NodeConnected -> ok;
     true -> {failed_to_connect, Node, Cookie}
   end,
-  send_debug_remote_node_response(Node, Status).
+  send_debug_remote_node_response(Node, Status),
+  NodeConnected andalso interpret_modules(Modules, Node).
 
 send_debug_remote_node_response(Node, ok) ->
   ?RDEBUG_NOTIFIER ! #debug_remote_node_response{node = Node, status = ok};
@@ -249,12 +253,14 @@ connect_node(Node) ->
       net_kernel:connect_node(Node)
   end.
 
-interpret_modules(_Modules, undefined) ->
-  ignore;
+interpret_modules([], _) ->
+  [];
+interpret_modules(Modules, undefined) ->
+  interpret_modules(Modules, node()), Modules;
 interpret_modules(Modules, Node) ->
   IntNiResults = [{Module, int:ni(Module)} || Module <- Modules],
   send_interpret_modules_response(Node, IntNiResults),
-  ok.
+  [].
 
 send_interpret_modules_response(Node, IntResults) ->
   Statuses = lists:map(fun
@@ -274,17 +280,19 @@ get_orignal_stack(Pid) ->
   end.
 
 
-ensure_condition(Condition) ->
+ensure_condition(Condition, DebugRoot) ->
   case erlang:function_exported(debug_condition, list_to_atom(Condition), 1) of
     true ->
       pass;
     _ ->
-      add_condition(Condition)
+      add_condition(Condition,DebugRoot)
   end.
 
-add_condition(Condition) ->
+add_condition(Condition,DebugRoot) ->
   FunString =  io_lib:format("'~s'(B) -> debug_eval:eval_with_bindings(\"~s\", B).\n",[Condition,Condition]),
-  file:write_file("debug_condition.erl", FunString, [append]),
+  ConditionFile = filename:append(DebugRoot, "debug_condition.erl"),
+  EvalFile = filename:append(DebugRoot, "debug_eval.erl"),
+  file:write_file(ConditionFile, FunString, [append]),
   io:format("add condition ~s~n",[Condition]),
-  c:nc("debug_eval.erl"),
-  c:nc("debug_condition.erl", [nowarn_export_all]).
+  c:nc(EvalFile,[{outdir,DebugRoot}]),
+  c:nc(ConditionFile, [nowarn_export_all,{outdir,DebugRoot}]).

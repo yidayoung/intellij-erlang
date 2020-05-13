@@ -244,7 +244,7 @@ public final class ErlangDebuggerCommandsProducer {
       myPid = pid;
       myExpression = expression;
 
-      if (expressionPosition == null) {
+      if (expressionPosition != null) {
         myStackPointer = traceElement.getStackPointer() == null ? 0 : traceElement.getStackPointer();
       }
       else {

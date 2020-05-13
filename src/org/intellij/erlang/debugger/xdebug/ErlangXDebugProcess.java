@@ -28,6 +28,7 @@ import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.ui.ExecutionConsole;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
@@ -81,6 +82,8 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     new ConcurrentHashMap<>();
   private Queue<XDebuggerEvaluator.XEvaluationCallback> myCallbackQueue = new LinkedBlockingQueue<>();
   private Set<String> InterpretedModules = new HashSet<>();
+  private boolean softUpdate = true;
+
   public ErlangXDebugProcess(@NotNull XDebugSession session, ExecutionEnvironment env) throws ExecutionException {
     //TODO add debug build targets and make sure the project is built using them.
     super(session);
@@ -115,8 +118,8 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     }
 
     //TODO split running debug target and debugger process spawning
-    myErlangProcessHandler = runDebugTarget();
     setModulesToInterpret();
+    myErlangProcessHandler = runDebugTarget();
     ErlangRunConfigurationBase<?> runConfig = getRunConfiguration();
     myLocationResolver = new ErlangDebugLocationResolver(runConfig.getProject(),
                                                          runConfig.getConfigurationModule().getModule(),
@@ -192,31 +195,68 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
   }
 
   @Override
-  public void breakpointReached(final OtpErlangPid pid, List<ErlangProcessSnapshot> snapshots) {
-    XSuspendContext suspendContextBase = mySession.getSuspendContext();
-    OtpErlangPid lastSuspendedPid = suspendContextBase != null ? ((ErlangSuspendContext)suspendContextBase).getActivePid() :
-                                    null;
-    if (mySession.isSuspended() && !Objects.equals(lastSuspendedPid, pid)){
-      return;
-    }
-    ErlangProcessSnapshot processInBreakpoint = ContainerUtil.find(snapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(pid));
-    if (lastSuspendedPid != null
-        && lastSuspendedPid.equals(pid)
-        && processInBreakpoint.getBreakLine() == ((ErlangSuspendContext)suspendContextBase).getBreakLine()
-        && snapshots.size() == suspendContextBase.getExecutionStacks().length)
-      return; //eval cmd will make a old breakpoint msg, but it would make refresh and call eval again, so ignore
-    ErlangSourcePosition breakPosition = ErlangSourcePosition.create(myLocationResolver, processInBreakpoint);
-    XLineBreakpoint<ErlangLineBreakpointProperties> breakpoint = getLineBreakpoint(breakPosition);
-    ErlangSuspendContext suspendContext = new ErlangSuspendContext(this, pid, snapshots);
-    if (breakpoint == null) {
-      getSession().positionReached(suspendContext);
-    }
-    else {
-      boolean shouldSuspend = getSession().breakpointReached(breakpoint, null, suspendContext);
-      if (!shouldSuspend) {
-        resume(suspendContext);
+  public void breakpointReached(OtpErlangPid pid, List<ErlangProcessSnapshot> snapshots) {
+    ErlangSuspendContext currentSuspendContext = (ErlangSuspendContext)mySession.getSuspendContext();
+    if (pid == null){
+      // pid is null means this is notify msg
+      if (currentSuspendContext == null){
+        pid = snapshots.get(0).getPid();
+        XLineBreakpoint<ErlangLineBreakpointProperties> breakpoint = getBreakPoint(pid, snapshots);
+        ErlangSuspendContext suspendContext = new ErlangSuspendContext(this, pid, snapshots);
+        myDebuggerNode.processSuspended(pid);
+        softUpdate = true;
+        if (breakpoint != null) {
+          getSession().breakpointReached(breakpoint, null, suspendContext);
+        }
+        else
+        {
+          getSession().positionReached(suspendContext);
+        }
       }
     }
+    else {
+      OtpErlangPid lastSuspendedPid = myDebuggerNode.getLastSuspendedPid();
+      if (lastSuspendedPid != null && lastSuspendedPid.equals(pid)){
+        OtpErlangPid finalPid = pid;
+        ErlangProcessSnapshot processInBreakpoint = ContainerUtil.find(snapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(finalPid));
+        if (processInBreakpoint != null && currentSuspendContext != null
+            && processInBreakpoint.getBreakLine() == currentSuspendContext.getBreakLine()
+            && snapshots.size() == currentSuspendContext.getExecutionStacks().length)
+          //eval cmd will make a old breakpoint msg, but it would make refresh and call eval again, so ignore
+          return;
+        ErlangSuspendContext suspendContext = new ErlangSuspendContext(this, pid, snapshots);
+        getSession().positionReached(suspendContext);
+      }
+      else{
+        // last update is not sync, should continue watch last pid
+        pid = (!softUpdate && lastSuspendedPid != null) ? lastSuspendedPid : pid;
+        ErlangSuspendContext suspendContext = new ErlangSuspendContext(this, pid, snapshots);
+        ErlangSourcePosition breakPosition = getErlangSourcePosition(pid, snapshots);
+        XLineBreakpoint<ErlangLineBreakpointProperties> breakpoint = getLineBreakpoint(breakPosition);
+        myDebuggerNode.processSuspended(pid);
+        if (breakpoint != null) {
+          getSession().breakpointReached(breakpoint, null, suspendContext);
+        }
+        else
+        {
+          getSession().positionReached(suspendContext);
+        }
+      }
+      softUpdate = false;
+    }
+  }
+
+  @Nullable
+  private ErlangSourcePosition getErlangSourcePosition(OtpErlangPid pid, List<ErlangProcessSnapshot> snapshots) {
+    ErlangProcessSnapshot processInBreakpoint = ContainerUtil.find(snapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(pid));
+    return ErlangSourcePosition.create(myLocationResolver, processInBreakpoint);
+  }
+
+  @Nullable
+  private XLineBreakpoint<ErlangLineBreakpointProperties> getBreakPoint(OtpErlangPid pid,
+                                                                        List<ErlangProcessSnapshot> snapshots) {
+    ErlangSourcePosition breakPosition = getErlangSourcePosition(pid, snapshots);
+    return getLineBreakpoint(breakPosition);
   }
 
   @Override
@@ -230,26 +270,41 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     return sourcePosition != null ? myPositionToLineBreakpointMap.get(sourcePosition) : null;
   }
   private void setModulesToInterpret() {
-    ErlangRemoteDebugRunConfiguration runConfig = (ErlangRemoteDebugRunConfiguration) getRunConfiguration();
+    ErlangRunConfigurationBase<?> runConfiguration = getRunConfiguration();
     Collection<ErlangFile> erlangModules = new ArrayList<>();
-    switch (runConfig.getInterpretScope()){
-      case ErlangRemoteDebugRunConfiguration.IN_BREAK_POINT_FILE:
-        return;
-      case ErlangRemoteDebugRunConfiguration.IN_MODULE:
-      {
-        Module tarModule = runConfig.getConfigurationModule().getModule();
-        assert tarModule != null;
-        erlangModules = ErlangModulesUtil.getErlangModules(tarModule, runConfig.isUseTestCodePath());
-        break;
-      }
-      case ErlangRemoteDebugRunConfiguration.IN_PROJECT:
-      {
-        erlangModules = ErlangModulesUtil.getErlangModules(runConfig.getProject());
-        break;
+    if(runConfiguration instanceof ErlangRemoteDebugRunConfiguration) {
+      ErlangRemoteDebugRunConfiguration runConfig = (ErlangRemoteDebugRunConfiguration) getRunConfiguration();
+      switch (runConfig.getInterpretScope()) {
+        case ErlangRemoteDebugRunConfiguration.IN_BREAK_POINT_FILE:
+          return;
+        case ErlangRemoteDebugRunConfiguration.IN_MODULE: {
+          Module tarModule = runConfig.getConfigurationModule().getModule();
+          assert tarModule != null;
+          erlangModules = ErlangModulesUtil.getErlangModules(tarModule, runConfig.isUseTestCodePath());
+          break;
+        }
+        case ErlangRemoteDebugRunConfiguration.IN_PROJECT: {
+          erlangModules = ErlangModulesUtil.getErlangModules(runConfig.getProject());
+          break;
+        }
       }
     }
-
-    Set<String> notToInterpret = runConfig.getDebugOptions().getModulesNotToInterpret();
+    else{
+      if (runConfiguration.isUseTestCodePath()) {
+        HashSet<ErlangFile> erlangTestModules = new HashSet<>();
+        for (Module module : runConfiguration.getModules()) {
+          erlangTestModules.addAll(ErlangModulesUtil.getErlangModules(module, true));
+        }
+        erlangTestModules.addAll(erlangModules);
+        erlangModules = erlangTestModules;
+      }
+      else
+      {
+        Project project = myExecutionEnvironment.getProject();
+        erlangModules = ErlangModulesUtil.getErlangModules(project);
+      }
+    }
+    Set<String> notToInterpret = runConfiguration.getDebugOptions().getModulesNotToInterpret();
     List<String> moduleSourcePaths = new ArrayList<>(erlangModules.size());
     for (ErlangFile erlangModule : erlangModules) {
       VirtualFile file = erlangModule.getVirtualFile();
@@ -364,14 +419,13 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
     try {
       GeneralCommandLine commandLine = new GeneralCommandLine();
       myRunningState.setExePath(commandLine);
-//      myRunningState.setWorkDirectory(commandLine);
+      myRunningState.setWorkDirectory(commandLine);
       setUpErlangDebuggerCodePath(commandLine);
       myRunningState.setCodePath(commandLine);
-      commandLine.setWorkDirectory(tempDirectory);
-      commandLine.addParameters("-run", "c", "c", "debugnode");
-      commandLine.addParameters("-run", "debugnode", "main", String.valueOf(myDebuggerNode.getLocalDebuggerPort()));
+      commandLine.addParameters("-run", "c", "c", tempDirectory.getPath() + File.separator + "debugnode");
+      commandLine.addParameters("-run", "debugnode", "main", String.valueOf(myDebuggerNode.getLocalDebuggerPort()), tempDirectory.getPath());
       myRunningState.setErlangFlags(commandLine);
-      myRunningState.setNoShellMode(commandLine);
+//      myRunningState.setNoShellMode(commandLine);
       myRunningState.setStopErlang(commandLine);
 
       LOG.debug("Running debugger process. Command line (platform-independent): ");
