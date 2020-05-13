@@ -19,11 +19,14 @@ package org.intellij.erlang.application;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.Executor;
 import com.intellij.execution.filters.TextConsoleBuilder;
-import com.intellij.execution.filters.TextConsoleBuilderFactory;
+import com.intellij.execution.filters.TextConsoleBuilderImpl;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
+import org.intellij.erlang.console.ErlangConsoleUtil;
+import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.runconfig.ErlangRunningState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,13 +42,26 @@ public class ErlangApplicationRunningState extends ErlangRunningState {
   }
 
   @Override
+  protected TextConsoleBuilder getConsoleBuilder(Project project) {
+    return new TextConsoleBuilderImpl(project) {
+      @NotNull
+      @Override
+      public ConsoleView getConsole() {
+        ErlangConsoleView consoleView = new ErlangConsoleView(project);
+        ErlangConsoleUtil.attachFilters(project, consoleView);
+        return consoleView;
+      }
+    };
+  }
+
+  @Override
   protected boolean useTestCodePath() {
     return myConfiguration.isUseTestCodePath();
   }
 
   @Override
   protected boolean isNoShellMode() {
-    return true;
+    return false;
   }
 
   @Override
@@ -77,7 +93,8 @@ public class ErlangApplicationRunningState extends ErlangRunningState {
   @NotNull
   @Override
   public ConsoleView createConsoleView(Executor executor) {
-    TextConsoleBuilder consoleBuilder = TextConsoleBuilderFactory.getInstance().createBuilder(myConfiguration.getProject());
-    return consoleBuilder.getConsole();
+    ErlangConsoleView consoleView = new ErlangConsoleView(myConfiguration.getProject());
+    ErlangConsoleUtil.attachFilters(myConfiguration.getProject(), consoleView);
+    return consoleView;
   }
 }

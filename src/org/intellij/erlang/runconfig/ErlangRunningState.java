@@ -27,6 +27,7 @@ import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.text.StringUtil;
@@ -65,13 +66,16 @@ public abstract class ErlangRunningState extends CommandLineState {
     setStopErlang(commandLine);
     setNoShellMode(commandLine);
     setErlangFlags(commandLine);
-    TextConsoleBuilder consoleBuilder = TextConsoleBuilderFactory.getInstance().createBuilder(myModule.getProject());
+    TextConsoleBuilder consoleBuilder = getConsoleBuilder(myModule.getProject());
     setConsoleBuilder(consoleBuilder);
     return commandLine;
   }
 
   protected List<String> getCodePath() throws ExecutionException {
     return ErlangConsoleUtil.getCodePath(myModule, useTestCodePath());
+  }
+  protected TextConsoleBuilder getConsoleBuilder(Project project){
+    return TextConsoleBuilderFactory.getInstance().createBuilder(project);
   }
 
   public Module getModule() {

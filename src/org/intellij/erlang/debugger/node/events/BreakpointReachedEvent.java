@@ -77,16 +77,6 @@ class BreakpointReachedEvent extends ErlangDebuggerEvent {
 
   @Override
   public void process(@NotNull ErlangDebuggerNode debuggerNode, @NotNull ErlangDebuggerEventListener eventListener) {
-    OtpErlangPid lastSuspendedPid = debuggerNode.getLastSuspendedPid();
-    ErlangProcessSnapshot suspendedSnap = ContainerUtil.find(mySnapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(lastSuspendedPid));
-    if (suspendedSnap != null && myActivePid != null) {
-      // if not sync message(myActivePid != null) andalso snaps do not have last pid snap, means we should change suspend pid
-      myActivePid = suspendedSnap.getPid();
-      debuggerNode.processSuspended(myActivePid);
-    }
-    else {
-      myActivePid = mySnapshots.get(0).getPid();
-    }
     eventListener.breakpointReached(myActivePid, mySnapshots);
   }
 

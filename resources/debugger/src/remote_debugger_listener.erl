@@ -117,7 +117,7 @@ run_debugger(Module, Function, ArgsString) ->
       %%TODO report error
       exit(normal);
     ArgsList ->
-      spawn_opt(Module, Function, ArgsList, [monitor])
+      spawn_opt(Module, Function, ArgsList, [])
   end.
 
 step_into(Pid) ->

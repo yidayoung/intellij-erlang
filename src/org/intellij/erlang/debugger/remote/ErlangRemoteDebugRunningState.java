@@ -17,14 +17,14 @@
 package org.intellij.erlang.debugger.remote;
 
 import com.intellij.execution.Executor;
-import com.intellij.execution.filters.TextConsoleBuilder;
-import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.execution.ParametersListUtil;
+import org.intellij.erlang.console.ErlangConsoleUtil;
+import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.runconfig.ErlangRunningState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,7 +49,7 @@ public class ErlangRemoteDebugRunningState extends ErlangRunningState {
 
   @Override
   protected boolean isNoShellMode() {
-    return true;
+    return false;
   }
 
   @Override
@@ -72,8 +72,9 @@ public class ErlangRemoteDebugRunningState extends ErlangRunningState {
   @NotNull
   @Override
   public ConsoleView createConsoleView(Executor executor) {
-    TextConsoleBuilder consoleBuilder = TextConsoleBuilderFactory.getInstance().createBuilder(getEnvironment().getProject());
-    return consoleBuilder.getConsole();
+    ErlangConsoleView consoleView = new ErlangConsoleView(myConfiguration.getProject());
+    ErlangConsoleUtil.attachFilters(myConfiguration.getProject(), consoleView);
+    return consoleView;
   }
 
   @Override
