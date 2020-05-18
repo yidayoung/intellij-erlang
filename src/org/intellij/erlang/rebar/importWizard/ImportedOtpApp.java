@@ -43,11 +43,22 @@ final class ImportedOtpApp {
   private final Set<VirtualFile> myTestPaths = new HashSet<>();
   private final Set<String> myApps = new HashSet<>();
   private final Set<String> myParseTransforms = new HashSet<>();
-  private final VirtualFile appDir;
   private final Boolean myIsRebar3;
   @Nullable
   private VirtualFile myIdeaModuleFile;
   private Module myModule;
+
+  public enum SINGLE_DIR_MODULE_TYPE {SOURCE, INCLUDE}
+
+  public ImportedOtpApp(@NotNull VirtualFile root, @NotNull final SINGLE_DIR_MODULE_TYPE type){
+    myRoot = root;
+    myIsRebar3 = true;
+    myName = "lib_"+root.getName();
+    if (type == SINGLE_DIR_MODULE_TYPE.INCLUDE)
+      myIncludePaths.add(root);
+    if (type == SINGLE_DIR_MODULE_TYPE.SOURCE)
+      mySourcePaths.add(root);
+  }
 
   public ImportedOtpApp(@NotNull VirtualFile root, @NotNull final VirtualFile appConfig, Boolean isRebar3) {
     myRoot = root;
@@ -59,19 +70,17 @@ final class ImportedOtpApp {
       addPath(myRoot, "test", myTestPaths);
       addPath(myRoot, "include", myIncludePaths);
     });
-    appDir = myRoot;
     myIsRebar3 = isRebar3;
   }
 
 
   public ImportedOtpApp(@NotNull VirtualFile root, Boolean isRebar3) {
     myRoot = root;
-    appDir = isRebar3 ? root.findChild("apps") : root;
+    VirtualFile appDir = isRebar3 ? root.findChild("apps") : root;
     myIsRebar3 = isRebar3;
 
     ApplicationManager.getApplication().runReadAction(() -> {
       addInfoFromRebarConfig();
-      addPath(myRoot, "include", myIncludePaths);
       if (isRebar3) {
         myName = root.getName();
         if (appDir != null) {
@@ -81,7 +90,7 @@ final class ImportedOtpApp {
               if (file.isDirectory()) {
                 VirtualFile appResourceFile = findAppResourceFile(file);
                 if (appResourceFile != null) {
-                  addDependenciesFromAppFile(appResourceFile);
+//                  addDependenciesFromAppFile(appResourceFile);
                   String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
                   myApps.add(appName);
                   myDeps.add(appName);
@@ -221,6 +230,12 @@ final class ImportedOtpApp {
     addDependenciesFromRebarConfig(rebarConfigPsi);
     addIncludePathsFromRebarConfig(rebarConfigPsi);
     addParseTransformsFromRebarConfig(rebarConfigPsi);
+    addExtraSourceDirFromRebarConfig(rebarConfigPsi);
+  }
+
+  private void addExtraSourceDirFromRebarConfig(ErlangFile rebarConfig) {
+    RebarConfigUtil.getExtraSrcDirs(rebarConfig)
+                   .forEach(path -> addPath(myRoot, path, mySourcePaths));
   }
 
   private void addDependenciesFromAppFile(@NotNull VirtualFile appFile) {
@@ -275,7 +290,10 @@ final class ImportedOtpApp {
   }
 
 
-  public Boolean getIsRebar3() {
+  public Boolean isRebar3() {
     return myIsRebar3;
+  }
+  public void addDeps(List<ImportedOtpApp> deps){
+    deps.forEach(app -> myDeps.add(app.getName()));
   }
 }

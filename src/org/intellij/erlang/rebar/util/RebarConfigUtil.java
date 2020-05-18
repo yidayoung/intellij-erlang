@@ -50,6 +50,25 @@ public final class RebarConfigUtil {
   }
 
   @NotNull
+  public static List<String> getExtraSrcDirs(@NotNull ErlangFile rebarConfig) {
+    final List<String> srcDirs = new ArrayList<>();
+    ErlangTermFileUtil.processConfigSection(rebarConfig, "extra_src_dirs", srcDirList -> {
+      if (srcDirList instanceof ErlangListExpression) {
+        List<ErlangExpression> expressionList = ((ErlangListExpression) srcDirList).getExpressionList();
+        expressionList.forEach(erlangExpression -> {
+          String path = erlangExpression.getText();
+          if (path.length() > 2) {
+            path = path.substring(1, path.length() - 1);
+            srcDirs.add(path);
+          }
+        });
+      }
+    });
+    return srcDirs;
+  }
+
+
+  @NotNull
   public static List<String> getDependencyAppNames(@NotNull ErlangFile rebarConfig) {
     final List<String> dependencyAppNames = new ArrayList<>();
     ErlangTermFileUtil.processConfigSection(rebarConfig, "deps", tuplesList -> {
