@@ -70,13 +70,6 @@ public class ErlangFindUsagesProvider implements FindUsagesProvider {
             processor.process(new WordOccurrence(fileText, start, end, WordOccurrence.Kind.CODE));
           }
         }
-//        if (tokenType == ErlangTypes.ERL_INCLUDE_STRING) {
-//          int tokenStart = lexer.getTokenStart();
-//          int tokenEnd = lexer.getTokenEnd();
-//          String text = lexer.getTokenText();
-//          int start = tokenStart + StringUtil.lastIndexOf(text, '/', 0, text.length());
-//          processor.process(new WordOccurrence(fileText, start, tokenEnd, WordOccurrence.Kind.CODE));
-//        }
         lexer.advance();
       }
     };

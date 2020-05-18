@@ -42,7 +42,9 @@ public class ErlangTargetProvider implements UsageTargetProvider {
       FileType fileType = ((ErlangFile) psiElement).getFileType();
       PsiElement findElement = psiElement;
       if (ErlangFileType.MODULE == fileType) {
-        findElement = psiFile.getModule();
+        if (psiFile.getModule() != null) {
+          findElement = psiFile.getModule();
+        }
       }
       if (ErlangFileType.TERMS == fileType){
         String moduleName = psiFile.getVirtualFile().getNameWithoutExtension();
@@ -52,9 +54,6 @@ public class ErlangTargetProvider implements UsageTargetProvider {
         if (modulesByName.size() > 0)
           findElement = modulesByName.get(0);
       }
-//      if (ErlangFileType.HEADER == fileType){
-//        findElement = ErlangElementFactory.createIncludeString(psiElement.getProject(), psiFile.getName());
-//      }
       assert findElement != null;
       return new UsageTarget[]{new PsiElement2UsageTargetAdapter(findElement)};
     }
