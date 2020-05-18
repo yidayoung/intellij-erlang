@@ -172,7 +172,12 @@ evaluate2(Pid, Expression, StackPointer, Node) ->
             FixResult = debug_eval:check_bindings(Parsed, Bindings, []),
             case FixResult of
               {ok, NewBindings} ->
-                {value, V, _} = rpc:call(Node, erl_eval, exprs, [Parsed, NewBindings]),
+                {value, V, _} = case Node of
+                  undefined ->
+                    erl_eval:exprs(Parsed, NewBindings);
+                  _ ->
+                    rpc:call(Node, erl_eval, exprs, [Parsed, NewBindings])
+                end,
                 {local_eval_mode, V};
               _ ->
                 FixResult
