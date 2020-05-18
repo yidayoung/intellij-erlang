@@ -32,6 +32,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +43,7 @@ public final class FileReferenceFilter implements Filter {
   public static final String LINE_MACROS = "$LINE$";
   private static final String COLUMN_MACROS = "$COLUMN$";
 
-  private static final String FILE_PATH_REGEXP = "((?:\\p{Alpha}\\:)?[0-9 a-z_A-Z\\-\\\\./]+)";
+  private static final String FILE_PATH_REGEXP = "((?:[a-zA-Z]:)?(?:\\p{Alpha}\\:)?[0-9 a-z_A-Z\\-\\\\./]+)";
   private static final String NUMBER_REGEXP = "([0-9]+)";
 
   private static final Pattern PATTERN_FILENAME = Pattern.compile("[/\\\\]?([^/\\\\]*?\\.erl)$");
@@ -52,6 +54,9 @@ public final class FileReferenceFilter implements Filter {
   private final int myLineMatchGroup;
   private final int myColumnMatchGroup;
 
+  private static final int CACHE_LINE_SIZE = 3;
+  private Queue<String> myLineQueue = new LinkedList<>();
+  
   public FileReferenceFilter(@NotNull Project project, @NonNls @NotNull String expression) {
     myProject = project;
     if (StringUtil.isEmpty(expression)) {
@@ -103,14 +108,28 @@ public final class FileReferenceFilter implements Filter {
 
   public Result applyFilter(@NotNull String line, int entireLength) {
     Matcher matcher = myPattern.matcher(line);
+    boolean multiline = false;
     if (!matcher.find()) {
-      return null;
+      line = cacheLines(myLineQueue, line);
+      matcher = myPattern.matcher(line);
+      if (!matcher.find())
+        return null;
+      multiline = true;
     }
+    myLineQueue.clear();
     String filePath = matcher.group(myFileMatchGroup);
     int fileLine = matchGroupToNumber(matcher, myLineMatchGroup);
     int fileCol = matchGroupToNumber(matcher, myColumnMatchGroup);
-    int highlightStartOffset = entireLength - line.length() + matcher.start(0);
-    int highlightEndOffset = highlightStartOffset + matcher.end(0) - matcher.start(0);
+    int highlightStartOffset;
+    int highlightEndOffset;
+    if (multiline){
+      highlightStartOffset = entireLength - line.length() + matcher.start(myFileMatchGroup);
+      highlightEndOffset = highlightStartOffset + filePath.length();
+    }
+    else {
+      highlightStartOffset = entireLength - line.length() + matcher.start(0);
+      highlightEndOffset = highlightStartOffset + matcher.end(0) - matcher.start(0);
+    }
     VirtualFile absolutePath = resolveAbsolutePath(filePath);
     HyperlinkInfo hyperLink = absolutePath != null
       ? new OpenFileHyperlinkInfo(myProject, absolutePath, fileLine, fileCol) : null;
@@ -162,4 +181,16 @@ public final class FileReferenceFilter implements Filter {
     String normalizedPath = path.replace(File.separatorChar, '/');
     return LocalFileSystem.getInstance().findFileByPath(normalizedPath);
   }
+  
+  private String cacheLines(Queue<String> oldQueue, String line){
+    if (oldQueue.size() >= CACHE_LINE_SIZE)
+      oldQueue.remove();
+    oldQueue.add(line);
+    StringBuilder concatLine = new StringBuilder();
+    for (String l : oldQueue){
+      concatLine.append(l);
+    }
+    return concatLine.toString();
+  }
+  
 }

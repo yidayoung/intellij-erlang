@@ -33,7 +33,7 @@ import java.io.File;
 import java.util.*;
 
 public final class ErlangConsoleUtil {
-  public static final String EUNIT_FAILURE_PATH = "\\[\\{file,\"" + FileReferenceFilter.PATH_MACROS + "\"\\},\\{line," + FileReferenceFilter.LINE_MACROS + "\\}\\]";
+  public static final String EUNIT_FAILURE_PATH = "\\[\\{file,\\s*\"" + FileReferenceFilter.PATH_MACROS + "\"\\},\\s*\\{line," + FileReferenceFilter.LINE_MACROS + "\\}\\]";
   public static final String EUNIT_ERROR_PATH = FileReferenceFilter.PATH_MACROS + ", line " + FileReferenceFilter.LINE_MACROS;
   public static final String COMPILATION_ERROR_PATH = FileReferenceFilter.PATH_MACROS + ":" + FileReferenceFilter.LINE_MACROS;
 
