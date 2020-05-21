@@ -55,7 +55,6 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
   
   @Nullable
   private static Problem parseProblem(String input) {
-
     List<String> split = StringUtil.split(input, ":");
     if (split.size() < 3) return null;
     int line = StringUtil.parseInt(split.get(1), 0);
@@ -111,6 +110,7 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
     } catch (ExecutionException e) {
       LOG.debug(e);
     }
+    //@todo undefined function undefined type need handle
     if (output != null) {
       if (output.getStderrLines().isEmpty()) {
         String stdout = output.getStdout();

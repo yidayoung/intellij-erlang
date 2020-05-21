@@ -28,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.fromTheSameCaseExpression;
+import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
 
 public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingReferenceBase<ErlangQVar> {
   public ErlangVariableReferenceImpl(@NotNull ErlangQVar element, TextRange range) {
@@ -57,7 +57,7 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   @Override
   public PsiElement resolveInner() {
     ResolveResult[] resolveResults = multiResolve(false);
-    return resolveResults.length > 0 ? resolveResults[0].getElement() : null;
+    return resolveResults.length > 0 ? resolveResults[resolveResults.length-1].getElement() : null;
   }
 
   @Override

@@ -50,7 +50,7 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
           || inConsoleFile(o))  {
           return;
         }
-        if (inCaseAssignment(o) && !inFunExpression(o)){
+        if (inCaseAssignment(o) && !inFunExpression(o) && !inArgumentList(o)){
           //if in case but got here Means not AllBranch defined o
           registerProblem(holder, o, "Variable " + "'" + o.getText() + "' is bound in case, but not all branch bound", new ErlangIntroduceVariableInCaseQuickFix());
           return;
