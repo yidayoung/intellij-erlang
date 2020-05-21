@@ -294,6 +294,6 @@ final class ImportedOtpApp {
     return myIsRebar3;
   }
   public void addDeps(List<ImportedOtpApp> deps){
-    deps.forEach(app -> myDeps.add(app.getName()));
+    deps.forEach(app -> ContainerUtil.addIfNotNull(myDeps,app.getName()));
   }
 }

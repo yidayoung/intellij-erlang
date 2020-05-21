@@ -32,11 +32,16 @@ import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.projectRoots.SdkTypeId;
 import com.intellij.openapi.roots.*;
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx;
+import com.intellij.openapi.roots.libraries.Library;
+import com.intellij.openapi.roots.libraries.LibraryTable;
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.openapi.vfs.*;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VfsUtilCore;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileVisitor;
 import com.intellij.openapi.vfs.newvfs.impl.VirtualDirectoryImpl;
 import com.intellij.packaging.artifacts.ModifiableArtifactModel;
 import com.intellij.projectImport.ProjectImportBuilder;
@@ -341,6 +346,13 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
           addSourceDirectories(content, importedOtpApp.getSourcePaths(), false);
           addSourceDirectories(content, importedOtpApp.getTestPaths(), true);
           addIncludeDirectories(content, importedOtpApp);
+          LibraryTable libraryTable = rootModel.getModuleLibraryTable();
+          for (VirtualFile includePath : rootApp.getIncludePaths()) {
+            Library library = libraryTable.createLibrary(ErlangIncludeDirectoryUtil.EXTRA_INCLUDE_NAME);
+            Library.ModifiableModel modifiableModel = library.getModifiableModel();
+            modifiableModel.addRoot(includePath, OrderRootType.CLASSES);
+            modifiableModel.commit();
+          }
         }
 
         // Initialize output paths according to Rebar conventions.
@@ -527,6 +539,10 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
                                                @NotNull Set<String> allImportedAppNames) {
     HashSet<String> unresolvedAppNames = new HashSet<>();
     for (String depAppName : importedOtpApp.getDeps()) {
+      if (depAppName.equals(rootModel.getModule().getName())){
+        Messages.showWarningDialog(String.format("module %s deps contains it self! check you app or app.src", depAppName), "Rebar Import");
+        continue;
+      }
       if (allImportedAppNames.contains(depAppName)) {
         rootModel.addInvalidModuleEntry(depAppName);
       }

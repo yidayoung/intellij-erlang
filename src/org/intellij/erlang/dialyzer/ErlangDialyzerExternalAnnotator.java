@@ -39,12 +39,15 @@ import com.intellij.profile.codeInspection.InspectionProjectProfileManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.ErlangFileType;
+import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.sdk.ErlangSystemUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDialyzerExternalAnnotator.State, ErlangDialyzerExternalAnnotator.State> {
   private final static Logger LOG = Logger.getInstance(ErlangDialyzerExternalAnnotator.class);
@@ -52,6 +55,7 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
   
   @Nullable
   private static Problem parseProblem(String input) {
+
     List<String> split = StringUtil.split(input, ":");
     if (split.size() < 3) return null;
     int line = StringUtil.parseInt(split.get(1), 0);
@@ -80,8 +84,8 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
     String dialyzerPath = homePath + "/bin/dialyzer" + (SystemInfo.isWindows ? ".exe" : "");
 
     String currentPltPath = DialyzerSettings.getInstance(file.getProject()).getCurrentPltPath();
-
-    return new State(dialyzerPath, currentPltPath, canonicalPath, workingDir);
+    List<VirtualFile> includeDirectories = ErlangIncludeDirectoryUtil.getIncludeDirectories(module);
+    return new State(dialyzerPath, currentPltPath, canonicalPath, workingDir, includeDirectories);
   }
 
   @Nullable
@@ -91,23 +95,50 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
 
     ProcessOutput output = null;
     try {
-      String[] params = StringUtil.isEmptyOrSpaces(state.myCurrentPltPath) ? new String[]{state.myFilePath} : new String[]{"--plt", state.myCurrentPltPath, state.myFilePath};
+      String[] params = StringUtil.isEmptyOrSpaces(state.myCurrentPltPath) ? new String[]{state.myFilePath} :
+                        new String[]{"--plt", state.myCurrentPltPath, state.myFilePath};
+      if(state.myIncludeDirectories.size() > 0){
+        ArrayList<String> includes = new ArrayList<>();
+        includes.add("-I");
+        for (VirtualFile dir : state.myIncludeDirectories){
+          includes.add(dir.getPath());
+        }
+        ContainerUtil.addAllNotNull(includes, params);
+        params = new String[includes.size()];
+        includes.toArray(params);
+      }
       output = ErlangSystemUtil.getProcessOutput(state.myWorkingDir, state.myDialyzerPath, params);
     } catch (ExecutionException e) {
       LOG.debug(e);
     }
     if (output != null) {
       if (output.getStderrLines().isEmpty()) {
-        for (String line : output.getStdoutLines()) {
-          LOG.debug(line);
-          if (line.startsWith("dialyzer: ")) {
-            NOTIFICATION_GROUP.createNotification(line, NotificationType.WARNING).notify(null); // todo: get a project
-            return state;
-          }
-          Problem problem = parseProblem(line);
-          LOG.debug(problem != null ? problem.toString() : null);
-          ContainerUtil.addAllNotNull(state.problems, problem);
+        String stdout = output.getStdout();
+        if (stdout.indexOf("dialyzer: ") > 0){
+          NOTIFICATION_GROUP.createNotification(stdout, NotificationType.WARNING).notify(null); // todo: get a project
+          return state;
         }
+        String BEGIN_STR="Proceeding with analysis...";
+        String END_STR = "done in";
+        int begin = stdout.indexOf(BEGIN_STR) + BEGIN_STR.length();
+        int end = stdout.indexOf(END_STR);
+        if (begin>BEGIN_STR.length() && end > begin)
+        {
+          stdout = stdout.substring(begin, end);
+          Pattern pattern = Pattern.compile("^[0-9 a-z_A-Z\\-\\\\./]+:(\\d+):", Pattern.MULTILINE);
+          Matcher matcher = pattern.matcher(stdout);
+          boolean find =matcher.find();
+          while (find){
+            int line = StringUtil.parseInt(matcher.group(1), 0);
+            int this_begin = matcher.end();
+            find = matcher.find();
+            int this_end = find?matcher.start():stdout.length();
+            Problem problem = new Problem(line, stdout.substring(this_begin, this_end));
+            LOG.debug(problem.toString());
+            ContainerUtil.addAllNotNull(state.problems, problem);
+          }
+        }
+
       }
     }
     return state;
@@ -163,12 +194,18 @@ public class ErlangDialyzerExternalAnnotator extends ExternalAnnotator<ErlangDia
     private final String myCurrentPltPath;
     private final String myFilePath;
     private final String myWorkingDir;
+    private final List<VirtualFile> myIncludeDirectories;
 
-    public State(String dialyzerPath, String currentPltPath, String filePath, String workingDir) {
+    public State(String dialyzerPath,
+                 String currentPltPath,
+                 String filePath,
+                 String workingDir,
+                 List<VirtualFile> includeDirectories) {
       myDialyzerPath = dialyzerPath;
       myCurrentPltPath = currentPltPath;
       myFilePath = filePath;
       myWorkingDir = workingDir;
+      myIncludeDirectories = includeDirectories;
     }
   }
 }

@@ -20,6 +20,8 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ContentEntry;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.roots.OrderRootType;
+import com.intellij.openapi.roots.libraries.Library;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -34,11 +36,18 @@ public final class ErlangIncludeDirectoryUtil {
   private ErlangIncludeDirectoryUtil() {
   }
 
+  public final static String EXTRA_INCLUDE_NAME = "ERLANG_EXTRA_INCLUDE";
   @NotNull
   public static List<VirtualFile> getIncludeDirectories(@Nullable Module module) {
     if (module == null) return ContainerUtil.emptyList();
     ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
-    return rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
+    List<VirtualFile> includes = rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
+    Library includeLib = rootManager.getModifiableModel().getModuleLibraryTable().getLibraryByName(EXTRA_INCLUDE_NAME);
+    if (includeLib != null) {
+      VirtualFile[] extraIncludes = includeLib.getFiles(OrderRootType.CLASSES);
+      ContainerUtil.addAllNotNull(includes, extraIncludes);
+    }
+    return includes;
   }
 
   public static void markAsIncludeDirectory(@NotNull ContentEntry contentEntry, @NotNull VirtualFile directory) {
