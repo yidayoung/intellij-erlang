@@ -22,6 +22,8 @@ import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.OrderRootType;
 import com.intellij.openapi.roots.libraries.Library;
+import com.intellij.openapi.roots.libraries.LibraryTable;
+import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -42,7 +44,9 @@ public final class ErlangIncludeDirectoryUtil {
     if (module == null) return ContainerUtil.emptyList();
     ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
     List<VirtualFile> includes = rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
-    Library includeLib = rootManager.getModifiableModel().getModuleLibraryTable().getLibraryByName(EXTRA_INCLUDE_NAME);
+//    ModifiableRootModel modifiableModel = rootManager.getModifiableModel();
+    LibraryTable libraryTable = LibraryTablesRegistrar.getInstance().getLibraryTable(module.getProject());
+    Library includeLib = libraryTable.getLibraryByName(EXTRA_INCLUDE_NAME);
     if (includeLib != null) {
       VirtualFile[] extraIncludes = includeLib.getFiles(OrderRootType.CLASSES);
       ContainerUtil.addAllNotNull(includes, extraIncludes);

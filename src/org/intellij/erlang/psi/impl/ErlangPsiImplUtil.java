@@ -114,41 +114,9 @@ public class ErlangPsiImplUtil {
 
   @Nullable
   public static PsiReference getReference(@NotNull ErlangQAtom o) { // todo: use multi reference
-    PsiReference[] referencesFromProviders = ReferenceProvidersRegistry.getReferencesFromProviders(o);
-    PsiReference atomReference = createAtomReference(o);
-    PsiReference[] psiReferences = atomReference == null ? referencesFromProviders : ArrayUtil.append(referencesFromProviders, atomReference);
-    if (psiReferences.length == 0) return null;
-    return new PsiMultiReference(psiReferences, o);
+    return new ErlangQAtomReferenceImpl(o, o, TextRange.from(0, o.getTextLength()));
   }
 
-  @Nullable
-  private static PsiReference createAtomReference(@NotNull final ErlangQAtom o) {
-    if (!standaloneAtom(o)) return null;
-    return new PsiPolyVariantReferenceBase<ErlangQAtom>(o, TextRange.create(0, o.getTextLength())) {
-      @NotNull
-      @Override
-      public ResolveResult[] multiResolve(boolean b) {
-        return new ResolveResult[]{};
-      }
-
-      @Override
-      public boolean isReferenceTo(@NotNull PsiElement element) {
-        return element instanceof ErlangQAtom && standaloneAtom(o) && Comparing.equal(element.getText(), getElement().getText());
-      }
-
-      @Override
-      public PsiElement handleElementRename(@NotNull String newName) throws IncorrectOperationException {
-        renameQAtom(o, newName);
-        return getElement();
-      }
-
-      @NotNull
-      @Override
-      public Object[] getVariants() { // todo
-        return ArrayUtil.EMPTY_OBJECT_ARRAY;
-      }
-    };
-  }
 
   public static boolean standaloneAtom(@NotNull ErlangQAtom o) {
     if (o.getAtom() == null) return false;
@@ -504,6 +472,63 @@ public class ErlangPsiImplUtil {
     return parent instanceof ErlangFunctionCallExpression && ((ErlangFunctionCallExpression) parent).getQAtom().getMacros() == null;
   }
 
+  @Nullable
+  public static String getConfigGetModule(PsiElement psiElement) {
+    if (!(inArgumentList(psiElement))){
+      return null;
+    }
+    ErlangGlobalFunctionCallExpression globalCallExpression = PsiTreeUtil.getParentOfType(psiElement, ErlangGlobalFunctionCallExpression.class);
+    if (globalCallExpression == null) return  null;
+    ErlangFunctionCallExpression callExpression = globalCallExpression.getFunctionCallExpression();
+    ErlangAtom funAtom = callExpression.getQAtom().getAtom();
+    ErlangAtom moduleAtom = globalCallExpression.getModuleRef().getQAtom().getAtom();
+    if (moduleAtom != null && funAtom != null && funAtom.getName().equals("get")) {
+      return moduleAtom.getName();
+    }
+    return null;
+  }
+
+  @Nullable
+  private static ErlangMapExpression getAtomMapExpression(PsiElement psiElement){
+    if (!(psiElement.getParent() instanceof ErlangAtom||psiElement instanceof ErlangQAtom)){
+      return null;
+    }
+    ErlangMapTuple tuple = PsiTreeUtil.getParentOfType(psiElement, ErlangMapTuple.class, true,
+                                                       ErlangFunctionCallExpression.class, ErlangFunClause.class, ErlangMapExpression.class);
+    PsiElement parent = tuple != null ? tuple.getParent() : null;
+    return parent instanceof ErlangMapExpression ? (ErlangMapExpression)parent:null;
+  }
+
+  @Nullable
+  public static String getMapsVarName(PsiElement psiElement){
+    ErlangMapExpression atomMapExpression = getAtomMapExpression(psiElement);
+    if (atomMapExpression != null) {
+      // Box#{b....}
+      ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression, ErlangMaxExpression.class);
+      if (expression != null) {
+        return expression.getText();
+      }
+      else {
+        // #{b....} = Box
+        expression = PsiTreeUtil.getChildOfType(atomMapExpression.getParent(), ErlangMaxExpression.class);
+      }
+      if (expression != null) {
+        return expression.getText();
+      }
+    }
+    ErlangFunctionCallExpression callExpression = PsiTreeUtil.getParentOfType(psiElement, ErlangFunctionCallExpression.class);
+    if (callExpression == null) return  null;
+    ErlangQAtom funAtom = callExpression.getQAtom();
+    if (funAtom.getText().equals("?mget")) {
+      ErlangArgumentList argumentList = callExpression.getArgumentList();
+      List<ErlangExpression> expressionList = argumentList.getExpressionList();
+      if (expressionList.size() >= 2) {
+        return expressionList.get(0).getText();
+      }
+    }
+    return null;
+  }
+
   public static boolean inFunctionTypeArgument(PsiElement psiElement) {
     ErlangType topType = PsiTreeUtil.getParentOfType(psiElement, ErlangType.class);
     return PsiTreeUtil.getParentOfType(topType, ErlangFunTypeArguments.class) != null;
@@ -755,7 +780,6 @@ public class ErlangPsiImplUtil {
         ErlangFile erlangFile = (ErlangFile) containingFile;
         functions.addAll(erlangFile.getFunctions());
         functions.addAll(getExternalFunctionForCompletion(containingFile.getProject(), "erlang"));
-        functions.addAll(getExternalFunctionForCompletion(containingFile.getProject(), "user_default"));
 
         List<ErlangImportFunction> directlyImported = erlangFile.getImportedFunctions();
         List<ErlangImportFunction> importsFromIncludes = getImportsFromIncludes(erlangFile, true, "", 0);

@@ -17,6 +17,7 @@
 package org.intellij.erlang.index;
 
 import com.intellij.util.indexing.FileBasedIndex;
+import org.intellij.erlang.BaseErlangFileType;
 import org.intellij.erlang.ErlangFileType;
 
 public final class ErlangIndexUtil {
@@ -24,4 +25,6 @@ public final class ErlangIndexUtil {
   }
 
   public static final FileBasedIndex.InputFilter ERLANG_MODULE_FILTER = file -> file.getFileType() == ErlangFileType.MODULE;
+  public static final FileBasedIndex.InputFilter ERLANG_HRL_FILTER = file -> file.getFileType() == ErlangFileType.HEADER;
+  public static final FileBasedIndex.InputFilter ERLANG_CONFIG_FILTER = file -> file.getFileType() == ErlangFileType.TERMS;
 }

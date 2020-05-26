@@ -24,6 +24,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.util.PsiTreeUtil;
+import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.bif.ErlangBifTable;
 import org.intellij.erlang.psi.*;
 import org.jetbrains.annotations.NotNull;
@@ -62,6 +63,16 @@ public final class ElementDocProviderFactory {
         return new ErlangSdkTypeDocProvider(project, virtualFile, typeDefinition.getName());
       }
       return null; // TODO implement TypeDocProvider
+    }
+    else if (psiElement instanceof ErlangQAtom){
+      VirtualFile virtualFile = getVirtualFile(psiElement);
+      if (virtualFile == null) return null;
+      if (virtualFile.getFileType() == ErlangFileType.TERMS){
+        return new ErlangConfigKeyDocProvider(virtualFile, psiElement);
+      }
+      if (virtualFile.getFileType() == ErlangFileType.HEADER){
+        return new ErlangMapsKeyDocProvider(psiElement);
+      }
     }
     else {
       ErlangGlobalFunctionCallExpression erlGlobalFunctionCall = PsiTreeUtil.getParentOfType(

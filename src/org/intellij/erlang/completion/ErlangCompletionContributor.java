@@ -51,9 +51,7 @@ import org.intellij.erlang.ErlangTypes;
 import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.formatter.settings.ErlangCodeStyleSettings;
 import org.intellij.erlang.icons.ErlangIcons;
-import org.intellij.erlang.index.ErlangApplicationIndex;
-import org.intellij.erlang.index.ErlangAtomIndex;
-import org.intellij.erlang.index.ErlangModuleIndex;
+import org.intellij.erlang.index.*;
 import org.intellij.erlang.parser.ErlangParserUtil;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
@@ -80,7 +78,10 @@ public class ErlangCompletionContributor extends CompletionContributor {
   public static final int EXTERNAL_FUNCTIONS_PRIORITY = -7;
   public static final int KEYWORD_PRIORITY            = -10;
   private static final int MODULE_PRIORITY             = -15;
-
+  @Nullable
+  private String myGetCallModule;
+  @Nullable
+  private String myMapsVarName;
   @Override
   public void beforeCompletion(@NotNull CompletionInitializationContext context) {
     PsiFile file = context.getFile();
@@ -103,6 +104,21 @@ public class ErlangCompletionContributor extends CompletionContributor {
       || parent instanceof ErlangRecordTuple || recordTuple != null || parent instanceof ErlangRecordField) && !is(previousByOffset, ErlangTypes.ERL_OP_EQ)
       || typeParent != null || isRecordFunctionCallCompletion(previousByOffset) || behaviour != null) {
       context.setDummyIdentifier("a");
+    }
+    if (elementAt != null) {
+      myGetCallModule = null;
+      myMapsVarName = null;
+      myGetCallModule = getConfigGetModule(elementAt);
+      if(myGetCallModule != null && myGetCallModule.equals("maps")){
+        ErlangArgumentList argumentList = PsiTreeUtil.getParentOfType(elementAt, ErlangArgumentList.class);
+        List<ErlangExpression> expressionList = argumentList != null ? argumentList.getExpressionList() : null;
+        if (expressionList != null && expressionList.size()>=2){
+          myMapsVarName = expressionList.get(1).getText();
+        }
+      }
+      else{
+        myMapsVarName = getMapsVarName(elementAt);
+      }
     }
   }
 
@@ -169,6 +185,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
           result.addAllElements(createFunctionLookupElements(((ErlangFile) file).getFunctions(), true));
         }
         else {
+          addSpecialCompletion(result, position);
           ErlangColonQualifiedExpression colonQualified = PsiTreeUtil.getParentOfType(position, ErlangColonQualifiedExpression.class);
           if (colonQualified != null && (PsiTreeUtil.getParentOfType(position, ErlangClauseBody.class) != null || inConsole)) {
             ErlangQAtom moduleAtom = getQAtom(colonQualified);
@@ -255,6 +272,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
       @Override
       protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
         PsiElement position = parameters.getPosition();
+        addSpecialCompletion(result, position);
         Set<ErlangExpressionType> expectedTypes = ErlangCompletionUtil.expectedArgumentTypes(position);
         if (expectedTypes.isEmpty()) return;
 
@@ -268,6 +286,41 @@ public class ErlangCompletionContributor extends CompletionContributor {
         }
       }
     });
+  }
+
+  private void addSpecialCompletion(@NotNull CompletionResultSet result,
+                                    PsiElement position) {
+    PsiFile file = position.getContainingFile();
+    add_file_atoms(result, file);
+    if (myMapsVarName != null){
+      List<String> names = ErlangTypeMapsFieldIndex.getMapsFields(file.getProject(), myMapsVarName);
+      for (String name : names) {
+        result.addElement(PrioritizedLookupElement.withPriority(
+          LookupElementBuilder.create(name).withLookupString(name).withIcon(ErlangIcons.RECORD), ATOM_PRIORITY));
+      }
+      return;
+    }
+    if(myGetCallModule != null){
+      add_config_atoms(result, file.getProject(), myGetCallModule);
+    }
+  }
+
+  private static void add_config_atoms(@NotNull CompletionResultSet result,
+                                       Project project,
+                                       String configName) {
+    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(project, configName + ".config");
+    for (String name : names) {
+      result.addElement(PrioritizedLookupElement.withPriority(
+        LookupElementBuilder.create(name).withLookupString(name).withIcon(ErlangIcons.RECORD), ATOM_PRIORITY));
+    }
+  }
+
+  private static void add_file_atoms(@NotNull CompletionResultSet result, PsiFile file){
+    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(file.getProject(), file.getName());
+    for (String name : names) {
+      result.addElement(PrioritizedLookupElement.withPriority(
+        LookupElementBuilder.create(name).withLookupString(name).withIcon(ErlangIcons.ATOM), ATOM_PRIORITY));
+    }
   }
 
   private static LookupElement createFieldLookupElement(@NotNull Project project, @NotNull String text, boolean withoutEq) {
