@@ -65,7 +65,7 @@ public class ErlangTypeMapsFieldIndex extends FileBasedIndexExtension<String, Li
               if (expressionList.size() == 2) {
                 if (expressionList.get(0).getText().equals("?t")) {
                   typed = true;
-                  typeName = getMapsVarType(expressionList.get(1).getText());
+                  typeName = getAtomType(expressionList.get(1).getText());
                 }
                 else fields.add(expressionList.get(0).getText());
               }
@@ -83,6 +83,10 @@ public class ErlangTypeMapsFieldIndex extends FileBasedIndexExtension<String, Li
     if (split.size() > 1){
       text = split.get(0);
     }
+    return getAtomType(text);
+  }
+
+  public static String getAtomType(String text){
     return text.toLowerCase().replaceAll("[^a-z]", "");
   }
 

@@ -17,6 +17,7 @@
 package org.intellij.erlang.index;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.containers.ContainerUtil;
@@ -27,9 +28,7 @@ import com.intellij.util.io.IOUtil;
 import com.intellij.util.io.KeyDescriptor;
 import gnu.trove.THashMap;
 import org.intellij.erlang.ErlangFileType;
-import org.intellij.erlang.psi.ErlangFile;
-import org.intellij.erlang.psi.ErlangQAtom;
-import org.intellij.erlang.psi.ErlangRecursiveVisitor;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -55,16 +54,26 @@ public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, List<St
       Set<String> atoms = new HashSet<>();
       PsiFile file = inputData.getPsiFile();
       if (file instanceof ErlangFile) {
-        file.accept(new ErlangRecursiveVisitor() {
-          @Override
-          public void visitQAtom(@NotNull ErlangQAtom o) {
-            if (file.getFileType() == ErlangFileType.MODULE){
+        if (file.getFileType() == ErlangFileType.MODULE) {
+          file.accept(new ErlangRecursiveVisitor() {
+            @Override
+            public void visitQAtom(@NotNull ErlangQAtom o) {
               if (ErlangPsiImplUtil.standaloneAtom(o)) atoms.add(o.getText());
             }
-            else
-              atoms.add(o.getText());
-          }
-        });
+          });
+        }
+        if (file.getFileType() == ErlangFileType.TERMS){
+          file.accept(new ErlangRecursiveVisitor(){
+            @Override
+            public void visitTupleExpression(@NotNull ErlangTupleExpression o) {
+              List<ErlangExpression> expressions = o.getExpressionList();
+              ErlangExpression configExpression = expressions.size() >= 2 ? expressions.get(0) : null;
+              PsiElement nameQAtom = configExpression instanceof ErlangConfigExpression ? configExpression.getFirstChild() : null;
+              ErlangAtom atom = nameQAtom instanceof ErlangQAtom ? ((ErlangQAtom) nameQAtom).getAtom() : null;
+              if(atom != null) atoms.add(atom.getName());
+            }
+          });
+        }
         result.put(file.getName(), new ArrayList<>(atoms));
       }
       return result;
@@ -110,7 +119,7 @@ public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, List<St
   @NotNull
   @Override
   public FileBasedIndex.InputFilter getInputFilter() {
-    return ErlangIndexUtil.ERLANG_CONFIG_FILTER;
+    return ErlangIndexUtil.ERLANG_ALL_FILTER;
   }
 
   @Override

@@ -73,13 +73,11 @@ public class ErlangVariableCompletionContributor extends CompletionContributor i
           if (module != null) {
             module.processDeclarations(new MyBaseScopeProcessor(vars, position, scopeOwner, true), ResolveState.initial(), module, module);
           }
-
           addVariables(result, vars);
-        }
-
-        Map<String, ErlangQVar> erlangVarContext = file.getOriginalFile().getUserData(ErlangVarProcessor.ERLANG_VARIABLE_CONTEXT);
-        if (erlangVarContext != null && PsiTreeUtil.getParentOfType(position, ErlangColonQualifiedExpression.class) == null) {
-          addVariables(result, erlangVarContext.keySet());
+          Map<String, ErlangQVar> erlangVarContext = file.getOriginalFile().getUserData(ErlangVarProcessor.ERLANG_VARIABLE_CONTEXT);
+          if (erlangVarContext != null && PsiTreeUtil.getParentOfType(position, ErlangColonQualifiedExpression.class) == null) {
+            addVariables(result, erlangVarContext.keySet());
+          }
         }
       }
     });

@@ -45,6 +45,6 @@ public class ErlangMapsKeyDocProvider implements ElementDocProvider {
     if (mapTuple == null) {
       return null;
     }
-    return mapTuple.getText().replaceAll("\n", "<br>").replaceAll(myPsiElement.getText(), "<b>"+myPsiElement.getText()+"</b>");
+    return mapTuple.getText().replaceAll("\n", "<br>").replaceAll(myPsiElement.getText(), "<b><em>"+myPsiElement.getText()+"</em></b>");
   }
 }

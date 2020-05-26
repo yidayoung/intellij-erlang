@@ -116,10 +116,10 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
   }
 
   private static String getMacroType(String name) {
-    if (StringUtil.endsWith(name,"_t")){
-     return name.substring(0, name.length()-2).toLowerCase().replaceAll("[^a-z]", "");
+    if (StringUtil.endsWith(name, "_t")) {
+      name = name.substring(0, name.length() - 2);
     }
-    return "";
+    return ErlangTypeMapsFieldIndex.getAtomType(name);
   }
 
   @Nullable
