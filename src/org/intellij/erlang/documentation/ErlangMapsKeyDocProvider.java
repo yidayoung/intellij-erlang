@@ -16,10 +16,12 @@
 
 package org.intellij.erlang.documentation;
 
+import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.psi.PsiComment;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
+import org.intellij.erlang.psi.ErlangMapEntry;
 import org.intellij.erlang.psi.ErlangMapTuple;
-import org.intellij.erlang.psi.ErlangMaxExpression;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -40,11 +42,16 @@ public class ErlangMapsKeyDocProvider implements ElementDocProvider {
   @Nullable
   @Override
   public String getDocText() {
-    PsiTreeUtil.getParentOfType(myPsiElement, ErlangMaxExpression.class);
     ErlangMapTuple mapTuple = PsiTreeUtil.getParentOfType(myPsiElement, ErlangMapTuple.class);
     if (mapTuple == null) {
       return null;
     }
-    return mapTuple.getText().replaceAll("\n", "<br>").replaceAll(myPsiElement.getText(), "<b><em>"+myPsiElement.getText()+"</em></b>");
+    ErlangMapEntry entry = PsiTreeUtil.getParentOfType(myPsiElement, ErlangMapEntry.class);
+    PsiComment comment = PsiTreeUtil.getNextSiblingOfType(entry, PsiComment.class);
+    String docString = StringUtil.convertLineSeparators(mapTuple.getText(), "<br>");
+    if (comment != null){
+      docString = entry.getText() + "    " + comment.getText() + "<br><br>" + docString;
+    }
+    return docString;
   }
 }
