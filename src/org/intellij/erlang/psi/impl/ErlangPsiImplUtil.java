@@ -115,7 +115,11 @@ public class ErlangPsiImplUtil {
 
   @Nullable
   public static PsiReference getReference(@NotNull ErlangQAtom o) { // todo: use multi reference
-    return new ErlangQAtomReferenceImpl(o, o, TextRange.from(0, o.getTextLength()));
+    PsiReference[] referencesFromProviders = ReferenceProvidersRegistry.getReferencesFromProviders(o);
+    PsiReference atomReference = standaloneAtom(o)?new ErlangQAtomReferenceImpl(o, o, TextRange.from(0, o.getTextLength())):null;
+    PsiReference[] psiReferences = atomReference == null ? referencesFromProviders : ArrayUtil.append(referencesFromProviders, atomReference);
+    if (psiReferences.length == 0) return null;
+    return new PsiMultiReference(psiReferences, o);
   }
 
 
