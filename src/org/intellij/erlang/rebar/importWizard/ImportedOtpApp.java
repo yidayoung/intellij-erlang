@@ -18,10 +18,10 @@ package org.intellij.erlang.rebar.importWizard;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileVisitor;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.psi.*;
@@ -47,18 +47,8 @@ final class ImportedOtpApp {
   @Nullable
   private VirtualFile myIdeaModuleFile;
   private Module myModule;
+  private String myAppDirPath;
 
-  public enum SINGLE_DIR_MODULE_TYPE {SOURCE, INCLUDE}
-
-  public ImportedOtpApp(@NotNull VirtualFile root, @NotNull final SINGLE_DIR_MODULE_TYPE type){
-    myRoot = root;
-    myIsRebar3 = true;
-    myName = "lib_"+root.getName();
-    if (type == SINGLE_DIR_MODULE_TYPE.INCLUDE)
-      myIncludePaths.add(root);
-    if (type == SINGLE_DIR_MODULE_TYPE.SOURCE)
-      mySourcePaths.add(root);
-  }
 
   public ImportedOtpApp(@NotNull VirtualFile root, @NotNull final VirtualFile appConfig, Boolean isRebar3) {
     myRoot = root;
@@ -84,26 +74,17 @@ final class ImportedOtpApp {
       if (isRebar3) {
         myName = root.getName();
         if (appDir != null) {
-          VfsUtilCore.visitChildrenRecursively(appDir, new VirtualFileVisitor<Void>() {
-            @Override
-            public boolean visitFile(@NotNull VirtualFile file) {
-              if (file.isDirectory()) {
-                VirtualFile appResourceFile = findAppResourceFile(file);
-                if (appResourceFile != null) {
-//                  addDependenciesFromAppFile(appResourceFile);
-                  String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
-                  myApps.add(appName);
-                  myDeps.add(appName);
-                }
-                return true;
-              }
-              return true;
-            }
-          });
+          myAppDirPath = appDir.getPath();
+          RebarConfigUtil.calcApps(appDir, myApps);
+          for (String app : myApps){
+            addPath(appDir, FileUtil.join(app, "src"), mySourcePaths);
+            addPath(appDir, FileUtil.join(app, "test"), myTestPaths);
+            addPath(appDir, FileUtil.join(app, "include"), myIncludePaths);
+          }
         }
       }
       else {
-        VirtualFile appResourceFile = findAppResourceFile(myRoot);
+        VirtualFile appResourceFile = RebarConfigUtil.findAppResourceFile(myRoot);
         assert appResourceFile != null;
         addDependenciesFromAppFile(appResourceFile);
         String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
@@ -125,22 +106,6 @@ final class ImportedOtpApp {
 
   }
 
-  @Nullable
-  private static VirtualFile findAppResourceFile(@NotNull VirtualFile applicationRoot) {
-    VirtualFile appResourceFile = null;
-    VirtualFile sourceDir = applicationRoot.findChild("src");
-    if (sourceDir != null) {
-      appResourceFile = findFileByExtension(sourceDir, "app.src");
-    }
-    if (appResourceFile == null) {
-      VirtualFile ebinDir = applicationRoot.findChild("ebin");
-      if (ebinDir != null) {
-        appResourceFile = findFileByExtension(ebinDir, "app");
-      }
-    }
-    return appResourceFile;
-  }
-
   private static HashSet<VirtualFile> findAppFileFromEbin(VirtualFile ebinRoot) {
     HashSet<VirtualFile> files = new HashSet<>();
     for (VirtualFile file : ebinRoot.getChildren()) {
@@ -150,13 +115,7 @@ final class ImportedOtpApp {
   }
 
 
-  @Nullable
-  private static VirtualFile findFileByExtension(@NotNull VirtualFile dir, @NotNull String extension) {
-    for (VirtualFile file : dir.getChildren()) {
-      if (!file.isDirectory() && file.getName().endsWith(extension)) return file;
-    }
-    return null;
-  }
+
 
   @NotNull
   public String getName() {
@@ -289,11 +248,11 @@ final class ImportedOtpApp {
     return myApps;
   }
 
-
   public Boolean isRebar3() {
     return myIsRebar3;
   }
-  public void addDeps(List<ImportedOtpApp> deps){
-    deps.forEach(app -> ContainerUtil.addIfNotNull(myDeps,app.getName()));
+
+  public String getAppDirPath() {
+    return myAppDirPath;
   }
 }

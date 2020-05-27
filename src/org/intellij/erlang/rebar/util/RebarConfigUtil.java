@@ -18,7 +18,9 @@ package org.intellij.erlang.rebar.util;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileVisitor;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -28,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class RebarConfigUtil {
   private RebarConfigUtil() {
@@ -103,5 +106,46 @@ public final class RebarConfigUtil {
     VirtualFile rebarConfig = otpAppRoot != null ? otpAppRoot.findChild("rebar.config") : null;
     PsiFile rebarConfigPsi = rebarConfig != null && !rebarConfig.isDirectory() ? PsiManager.getInstance(project).findFile(rebarConfig) : null;
     return rebarConfigPsi instanceof ErlangFile ? (ErlangFile) rebarConfigPsi : null;
+  }
+
+  public static void calcApps(VirtualFile appDir, Set<String> apps) {
+    VfsUtilCore.visitChildrenRecursively(appDir, new VirtualFileVisitor<Void>() {
+      @Override
+      public boolean visitFile(@NotNull VirtualFile file) {
+        if (file.isDirectory()) {
+          VirtualFile appResourceFile = findAppResourceFile(file);
+          if (appResourceFile != null) {
+            String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
+            apps.add(appName);
+          }
+          return true;
+        }
+        return true;
+      }
+    });
+  }
+
+  @Nullable
+  public static VirtualFile findAppResourceFile(@NotNull VirtualFile applicationRoot) {
+    VirtualFile appResourceFile = null;
+    VirtualFile sourceDir = applicationRoot.findChild("src");
+    if (sourceDir != null) {
+      appResourceFile = findFileByExtension(sourceDir, "app.src");
+    }
+    if (appResourceFile == null) {
+      VirtualFile ebinDir = applicationRoot.findChild("ebin");
+      if (ebinDir != null) {
+        appResourceFile = findFileByExtension(ebinDir, "app");
+      }
+    }
+    return appResourceFile;
+  }
+
+  @Nullable
+  private static VirtualFile findFileByExtension(@NotNull VirtualFile dir, @NotNull String extension) {
+    for (VirtualFile file : dir.getChildren()) {
+      if (!file.isDirectory() && file.getName().endsWith(extension)) return file;
+    }
+    return null;
   }
 }

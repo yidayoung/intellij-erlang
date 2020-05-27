@@ -57,6 +57,7 @@ import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
+import org.intellij.erlang.sdk.ErlangSystemUtil;
 import org.intellij.erlang.stubs.index.ErlangBehaviourModuleIndex;
 import org.intellij.erlang.types.ErlangExpressionType;
 import org.intellij.erlang.utils.ErlangModulesUtil;
@@ -404,8 +405,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
     for (VirtualFile includeDir : ErlangIncludeDirectoryUtil.getIncludeDirectories(module)) {
       result.addAll(getModulePathLookupElements(includeDir, includeOwner, includeText));
     }
-//    if (ErlangSystemUtil.isSmallIde()) {
-    {
+    if (ErlangSystemUtil.isSmallIde()) {
       VirtualFile otpAppRoot = getContainingOtpAppRoot(file.getProject(), includeOwner);
       VirtualFile otpIncludeDirectory = otpAppRoot != null ? otpAppRoot.findChild("include") : null;
       result.addAll(getModulePathLookupElements(otpIncludeDirectory, includeOwner, includeText));
@@ -414,21 +414,6 @@ public class ErlangCompletionContributor extends CompletionContributor {
         for (String relativeIncludePath : ContainerUtil.reverse(RebarConfigUtil.getIncludePaths(rebarConfigPsi))) {
           VirtualFile includePath = VfsUtilCore.findRelativeFile(relativeIncludePath, otpAppRoot);
           result.addAll(getModulePathLookupElements(includePath, includeOwner, includeText));
-        }
-      }
-      else if (otpAppRoot != null) {
-        // if app in apps dir, it means should check rebar.config in project root
-        otpAppRoot = otpAppRoot.getParent();
-        if (otpAppRoot.getName().equals("apps")) {
-          otpAppRoot = otpAppRoot.getParent();
-          rebarConfigPsi = RebarConfigUtil.getRebarConfig(file.getProject(), otpAppRoot);
-
-          if (rebarConfigPsi != null) {
-            for (String relativeIncludePath : ContainerUtil.reverse(RebarConfigUtil.getIncludePaths(rebarConfigPsi))) {
-              VirtualFile includePath = VfsUtilCore.findRelativeFile(relativeIncludePath, otpAppRoot);
-              result.addAll(getModulePathLookupElements(includePath, includeOwner, includeText));
-            }
-          }
         }
       }
     }

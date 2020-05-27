@@ -25,7 +25,12 @@ import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.CompilerModuleExtension;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import org.intellij.erlang.facet.ErlangFacet;
+import org.intellij.erlang.facet.ErlangFacetConfiguration;
+import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,8 +86,21 @@ public final class ErlangConsoleUtil {
         codePath.add("-pa");
         codePath.add(contentRoot.getPath());
       }
+      ErlangFacet facet = ErlangFacet.getFacet(codePathModule);
+      if (facet != null) {
+        ErlangFacetConfiguration configuration = facet.getConfiguration();
+        String appsDirPath = configuration.getAppsDirPath();
+        VirtualFile appDir = appsDirPath != null ?LocalFileSystem.getInstance().findFileByPath(appsDirPath):null;
+        HashSet<String> apps = new HashSet<>();
+        if (appDir != null && buildOutput != null){
+          RebarConfigUtil.calcApps(appDir, apps);
+          for (String app : apps) {
+            codePath.add("-pa");
+            codePath.add(FileUtil.join(buildOutput.getPath(), "lib", app, "ebin"));
+          }
+        }
+      }
     }
-
     return codePath;
   }
 

@@ -70,6 +70,7 @@ import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.sdk.ErlangSdkRelease;
 import org.intellij.erlang.sdk.ErlangSdkType;
+import org.intellij.erlang.sdk.ErlangSystemUtil;
 import org.intellij.erlang.stubs.*;
 import org.intellij.erlang.utils.ErlangModulesUtil;
 import org.jetbrains.annotations.Contract;
@@ -1347,12 +1348,13 @@ public class ErlangPsiImplUtil {
       }
     }
     //TODO consider providing source roots functionality to small IDEs
-//    if (ErlangSystemUtil.isSmallIde()) {
-    {
-      VirtualFile appRoot = getContainingOtpAppRoot(project, parent);
-      return getDirectlyIncludedFilesForSmallIde(project, relativePath, appRoot);
+    if (ErlangSystemUtil.isSmallIde()) {
+      {
+        VirtualFile appRoot = getContainingOtpAppRoot(project, parent);
+        return getDirectlyIncludedFilesForSmallIde(project, relativePath, appRoot);
+      }
     }
-//    return ContainerUtil.emptyList();
+    return ContainerUtil.emptyList();
   }
 
   @NotNull
@@ -1368,18 +1370,6 @@ public class ErlangPsiImplUtil {
         VirtualFile includePathVirtualFile = VfsUtilCore.findRelativeFile(includePath, otpAppRoot);
         ErlangFile includedFile = getRelativeErlangFile(project, includeStringPath, includePathVirtualFile);
         if (includedFile != null) return new SmartList<>(includedFile);
-      }
-    }
-    otpAppRoot = otpAppRoot.getParent();
-    if (otpAppRoot.getName().equals("apps")){
-      otpAppRoot = otpAppRoot.getParent();
-      rebarConfigPsi = RebarConfigUtil.getRebarConfig(project, otpAppRoot);
-      if (rebarConfigPsi != null) {
-        for(String includePath : ContainerUtil.reverse(RebarConfigUtil.getIncludePaths(rebarConfigPsi))) {
-          VirtualFile includePathVirtualFile = VfsUtilCore.findRelativeFile(includePath, otpAppRoot);
-          ErlangFile includedFile = getRelativeErlangFile(project, includeStringPath, includePathVirtualFile);
-          if (includedFile != null) return new SmartList<>(includedFile);
-        }
       }
     }
     return ContainerUtil.emptyList();

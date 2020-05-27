@@ -28,11 +28,13 @@ public class ErlangModuleExtensionProperties {
   @AbstractCollection(surroundWithTag = false, elementTag = "transform")
   //should not contain duplicate elements
   public List<String> myParseTransforms = new ArrayList<>();
+  public String myAppsDirPath = null;
 
   public ErlangModuleExtensionProperties() {
   }
 
   public ErlangModuleExtensionProperties(@NotNull ErlangModuleExtensionProperties props) {
     myParseTransforms = new ArrayList<>(props.myParseTransforms);
+    myAppsDirPath = props.myAppsDirPath;
   }
 }

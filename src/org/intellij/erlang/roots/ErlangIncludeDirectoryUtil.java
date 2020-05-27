@@ -38,20 +38,11 @@ public final class ErlangIncludeDirectoryUtil {
   private ErlangIncludeDirectoryUtil() {
   }
 
-  public final static String EXTRA_INCLUDE_NAME = "ERLANG_EXTRA_INCLUDE";
   @NotNull
   public static List<VirtualFile> getIncludeDirectories(@Nullable Module module) {
     if (module == null) return ContainerUtil.emptyList();
     ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
-    List<VirtualFile> includes = rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
-//    ModifiableRootModel modifiableModel = rootManager.getModifiableModel();
-    LibraryTable libraryTable = LibraryTablesRegistrar.getInstance().getLibraryTable(module.getProject());
-    Library includeLib = libraryTable.getLibraryByName(EXTRA_INCLUDE_NAME);
-    if (includeLib != null) {
-      VirtualFile[] extraIncludes = includeLib.getFiles(OrderRootType.CLASSES);
-      ContainerUtil.addAllNotNull(includes, extraIncludes);
-    }
-    return includes;
+    return rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
   }
 
   public static void markAsIncludeDirectory(@NotNull ContentEntry contentEntry, @NotNull VirtualFile directory) {

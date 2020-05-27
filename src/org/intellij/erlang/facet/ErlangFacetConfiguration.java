@@ -63,4 +63,12 @@ public class ErlangFacetConfiguration implements FacetConfiguration, PersistentS
     if (newParseTransforms.isEmpty()) return;
     setParseTransformsFrom(ContainerUtil.concat(myState.myParseTransforms, newParseTransforms));
   }
+
+  public String getAppsDirPath(){
+    return myState.myAppsDirPath;
+  }
+
+  public void setAppsDirPath(String path){
+    myState.myAppsDirPath = path;
+  }
 }
