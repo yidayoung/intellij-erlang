@@ -169,8 +169,8 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
 
 
   @Override
-  public void printMessage(String messageText, ConsoleViewContentType type) {
-    getSession().getConsoleView().print(messageText + "\n", type);
+  public void printMessage(String messageText, MessageType type) {
+    getSession().reportMessage(messageText, type);
   }
 
   
@@ -422,7 +422,7 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
       myRunningState.setWorkDirectory(commandLine);
       setUpErlangDebuggerCodePath(commandLine);
       myRunningState.setCodePath(commandLine);
-      commandLine.addParameters("-run", "c", "c", tempDirectory.getPath() + File.separator + "debugnode");
+//      commandLine.addParameters("-run", "c", "c", tempDirectory.getPath() + File.separator + "debugnode");
       commandLine.addParameters("-run", "debugnode", "main", String.valueOf(myDebuggerNode.getLocalDebuggerPort()), tempDirectory.getPath());
       myRunningState.setErlangFlags(commandLine);
       myRunningState.setNoShellMode(commandLine);
@@ -471,13 +471,14 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
   private static void setUpErlangDebuggerCodePath(GeneralCommandLine commandLine) throws ExecutionException {
     LOG.debug("Setting up debugger environment.");
     try {
-      String[] files = {"debug_condition.erl", "debug_eval.erl", "debugnode.erl",
+      String[] files = {"debug_condition.erl", "debug_eval.erl",
                         "remote_debugger.erl", "remote_debugger_listener.erl",
                         "remote_debugger_notifier.erl", "process_names.hrl",
                         "remote_debugger_messages.hrl", "trace_utils.hrl"};
       tempDirectory = FileUtil.createTempDirectory("intellij_erlang_debugger_", null, true);
       LOG.debug("Debugger beams will be put to: " + tempDirectory.getPath());
       copyFiles(files, tempDirectory, "/debugger/src");
+      copyFiles(new String[]{"debugnode.beam"}, tempDirectory, "/debugger/beams");
       LOG.debug("Debugger beams were copied successfully.");
       commandLine.addParameters("-pa", tempDirectory.getPath());
     }

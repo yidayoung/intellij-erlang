@@ -18,7 +18,7 @@ package org.intellij.erlang.debugger.node.events;
 
 import com.ericsson.otp.erlang.OtpErlangObject;
 import com.ericsson.otp.erlang.OtpErlangTuple;
-import com.intellij.execution.ui.ConsoleViewContentType;
+import com.intellij.openapi.ui.MessageType;
 import org.intellij.erlang.debugger.node.ErlangDebuggerEventListener;
 import org.intellij.erlang.debugger.node.ErlangDebuggerNode;
 
@@ -40,7 +40,7 @@ class DebugRemoteNodeResponseEvent extends ErlangDebuggerEvent {
       eventListener.failedToDebugRemoteNode(myNodeName, myError);
     }
     else {
-      eventListener.printMessage("debug_remote_node:" + myNodeName + " success!", ConsoleViewContentType.LOG_INFO_OUTPUT);
+      eventListener.printMessage("debug_remote_node:" + myNodeName + " success!", MessageType.INFO);
     }
   }
 }

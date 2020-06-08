@@ -17,6 +17,7 @@
 package org.intellij.erlang.index;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.CommonProcessors;
@@ -24,6 +25,7 @@ import com.intellij.util.indexing.*;
 import com.intellij.util.io.EnumeratorStringDescriptor;
 import com.intellij.util.io.KeyDescriptor;
 import gnu.trove.THashMap;
+import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.psi.ErlangFile;
 import org.intellij.erlang.psi.ErlangQAtom;
 import org.intellij.erlang.psi.ErlangRecursiveVisitor;
@@ -61,6 +63,9 @@ public class ErlangAtomIndex extends ScalarIndexExtension<String> {
             if (ErlangPsiImplUtil.standaloneAtom(o)) result.put(o.getText(), null);
           }
         });
+      }
+      if(file.getFileType() == ErlangFileType.TERMS){
+        result.put(FileUtil.getNameWithoutExtension(file.getName()), null);
       }
       return result;
     };

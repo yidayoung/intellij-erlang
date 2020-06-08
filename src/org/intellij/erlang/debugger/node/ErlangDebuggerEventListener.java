@@ -18,7 +18,7 @@ package org.intellij.erlang.debugger.node;
 
 import com.ericsson.otp.erlang.OtpErlangObject;
 import com.ericsson.otp.erlang.OtpErlangPid;
-import com.intellij.execution.ui.ConsoleViewContentType;
+import com.intellij.openapi.ui.MessageType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -33,5 +33,5 @@ public interface ErlangDebuggerEventListener {
   void breakpointReached(@Nullable OtpErlangPid pid, List<ErlangProcessSnapshot> snapshots);
   void debuggerStopped();
   void handleEvaluationResponse(OtpErlangObject response);
-  void printMessage(String messageText, ConsoleViewContentType type);
+  void printMessage(String messageText, MessageType type);
 }

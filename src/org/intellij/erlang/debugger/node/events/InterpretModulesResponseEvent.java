@@ -19,7 +19,7 @@ package org.intellij.erlang.debugger.node.events;
 import com.ericsson.otp.erlang.OtpErlangList;
 import com.ericsson.otp.erlang.OtpErlangObject;
 import com.ericsson.otp.erlang.OtpErlangTuple;
-import com.intellij.execution.ui.ConsoleViewContentType;
+import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.intellij.erlang.debugger.node.ErlangDebuggerEventListener;
@@ -64,7 +64,7 @@ class InterpretModulesResponseEvent extends ErlangDebuggerEvent {
     if (!myFailedToInterpretModules.isEmpty()) {
       eventListener.failedToInterpretModules(myNodeName, myFailedToInterpretModules);
     }else {
-      eventListener.printMessage("interpret_modules_response:" + myNodeName + " success!", ConsoleViewContentType.LOG_INFO_OUTPUT);
+      eventListener.printMessage("interpret_modules_response:" + myNodeName + " success!", MessageType.INFO);
     }
   }
 }

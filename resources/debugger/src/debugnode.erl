@@ -37,7 +37,7 @@ stop_debugger() ->
   ok.
 
 -define(CODE_LIST, ["remote_debugger.erl", "remote_debugger_listener.erl", "remote_debugger_notifier.erl",
-  "debug_eval.erl", "debugnode.erl"]).
+  "debug_eval.erl"]).
 cl_code(Path) ->
   [c:c(filename:join(Path, File),[{outdir,Path}]) || File <- ?CODE_LIST].
 
