@@ -49,14 +49,19 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
           || inCallback(o) || inRecordDefinition(o)|| inMacroArguments(o))  {
           return;
         }
-        if (inCaseAssignment(o) && !inFunExpression(o) && !inArgumentList(o)){
-          //if in case but got here Means not AllBranch defined o
-          registerProblem(holder, o, "Variable " + "'" + o.getText() + "' is bound in case, but not all branch bound", new ErlangIntroduceVariableInCaseQuickFix());
-          return;
-        }
+
         PsiReference reference = o.getReference();
-        if (reference != null && reference.resolve() == null) {
+        if (reference.resolve() == null) {
           registerProblem(holder, o, "Variable " + "'" + o.getText() + "' is unbound", new ErlangIntroduceVariableQuickFix());
+        }
+        else {
+          PsiElement resolve = reference.resolve();
+          if (resolve instanceof ErlangQVar && inCaseAssignment(resolve))
+          {
+            if (fromTheSameCaseExpression(o,resolve)) return;
+            if (inCaseAssignmentAllBranch(o, true)) return;
+            registerProblem(holder, o, "Variable " + "'" + o.getText() + "' is bound in case, but not all branch bound", new ErlangIntroduceVariableInCaseQuickFix());
+          }
         }
       }
     };
@@ -80,26 +85,23 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
       }
 
       if (anchor != null) {
-        PsiElement parent = anchor.getParent();
-        if (parent != null) {
-          Editor editor = PsiUtilBase.findEditor(anchor);
-          if (editor == null) return;
+        Editor editor = PsiUtilBase.findEditor(anchor);
+        if (editor == null) return;
 
-          editor.getCaretModel().moveToOffset(anchor.getTextRange().getStartOffset());
+        editor.getCaretModel().moveToOffset(anchor.getTextRange().getStartOffset());
 
-          TemplateManager manager = TemplateManager.getInstance(project);
-          Template template = manager.createTemplate("", "");
+        TemplateManager manager = TemplateManager.getInstance(project);
+        Template template = manager.createTemplate("", "");
 
-          template.addTextSegment(((ErlangQVar) psiElement).getName());
-          template.addTextSegment(" = ");
-          template.addVariable(new ConstantNode("unbound"), true);
-          template.addTextSegment("");
-          template.addEndVariable();
-          template.addTextSegment(",\n");
+        template.addTextSegment(((ErlangQVar) psiElement).getName());
+        template.addTextSegment(" = ");
+        template.addVariable(new ConstantNode("unbound"), true);
+        template.addTextSegment("");
+        template.addEndVariable();
+        template.addTextSegment(",\n");
 
-          manager.startTemplate(editor, template);
+        manager.startTemplate(editor, template);
 
-        }
       }
     }
   }

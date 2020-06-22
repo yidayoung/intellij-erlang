@@ -249,7 +249,7 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
   @Nullable
   private ErlangSourcePosition getErlangSourcePosition(OtpErlangPid pid, List<ErlangProcessSnapshot> snapshots) {
     ErlangProcessSnapshot processInBreakpoint = ContainerUtil.find(snapshots, erlangProcessSnapshot -> erlangProcessSnapshot.getPid().equals(pid));
-    return ErlangSourcePosition.create(myLocationResolver, processInBreakpoint);
+    return processInBreakpoint!=null?ErlangSourcePosition.create(myLocationResolver, processInBreakpoint):null;
   }
 
   @Nullable

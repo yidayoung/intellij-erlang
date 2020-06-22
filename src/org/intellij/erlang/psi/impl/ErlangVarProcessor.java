@@ -80,7 +80,8 @@ public class ErlangVarProcessor implements PsiScopeProcessor {
 //      if (hasNarrowerParentScope(psiElement)) return true;
       // put all possible variables to list
       boolean inArgDefList = inFunArgList(psiElement);
-      return !myVarList.add((ErlangQVar) psiElement) && !inArgDefList;
+      myVarList.add((ErlangQVar) psiElement);
+      return !inArgDefList;
     }
 
     return true;

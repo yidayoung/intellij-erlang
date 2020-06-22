@@ -613,36 +613,9 @@ public class ErlangPsiImplUtil {
   }
 
   public static boolean inCaseAssignment(@NotNull PsiElement psiElement) {
-    PsiElement parent = psiElement.getParent();
-    PsiElement element = psiElement;
-    while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
-      while (element != null) {
-        if (element instanceof ErlangCaseExpression) {
-          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
-          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, true)) {
-            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
-            boolean allBranchFind = false;
-            for (ErlangCrClause c : crClauseList) {
-              ErlangClauseBody clauseBody = c.getClauseBody();
-              ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
-              boolean thisFind = ((clauseBody != null) && findInClause(clauseBody, psiElement)) ||
-                                 ((clauseArg != null) && findInClause(clauseArg, psiElement));
-              allBranchFind |= thisFind;
-            }
-            if (allBranchFind) return true;
-          }
-        }
-        element = element.getPrevSibling();
-      }
-      element = parent;
-      parent = parent.getParent();
-    }
-    return false;
+    return PsiTreeUtil.getParentOfType(psiElement, ErlangCaseExpression.class) != null;
   }
 
-  public static boolean inFunExpression(PsiElement psiElement){
-    return PsiTreeUtil.getParentOfType(psiElement, ErlangFunExpression.class) != null;
-  }
 
   @Nullable
   public static PsiElement findValInCaseAssignmentButNotDefine(@NotNull PsiElement psiElement) {
@@ -673,7 +646,7 @@ public class ErlangPsiImplUtil {
   }
 
 
-  private static boolean inCaseAssignmentAllBranch(@NotNull PsiElement psiElement, boolean strict){
+  public static boolean inCaseAssignmentAllBranch(@NotNull PsiElement psiElement, boolean strict){
     PsiElement parent = psiElement.getParent();
     PsiElement element = psiElement;
     while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
@@ -2143,6 +2116,7 @@ public class ErlangPsiImplUtil {
         ErlangCaseExpression ce1 = PsiTreeUtil.getParentOfType(element, ErlangCaseExpression.class);
         ErlangCaseExpression ce2 = PsiTreeUtil.getParentOfType(origin, ErlangCaseExpression.class);
         if (Comparing.equal(ce1, ce2)) return true;
+        if(PsiTreeUtil.isAncestor(ce1, ce2, true)|| PsiTreeUtil.isAncestor(ce2, ce1, true)) return true;
       }
     }
     return false;
