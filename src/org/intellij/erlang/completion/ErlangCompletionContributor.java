@@ -84,10 +84,13 @@ public class ErlangCompletionContributor extends CompletionContributor {
   private String myGetCallModule;
   @Nullable
   private String myMapsVarName;
+  private String myAtomName;
+
   @Override
   public void beforeCompletion(@NotNull CompletionInitializationContext context) {
     myGetCallModule = null;
     myMapsVarName = null;
+    myAtomName = null;
     PsiFile file = context.getFile();
     if (ErlangParserUtil.isApplicationConfigFileType(file)) return;
     int startOffset = context.getStartOffset();
@@ -111,6 +114,11 @@ public class ErlangCompletionContributor extends CompletionContributor {
     }
     if (elementAt != null) {
       refreshMapsInfo(elementAt);
+    }
+    if (startOffset > 1) {
+      PsiElement lastElement = file.findElementAt(startOffset - 1);
+      if (lastElement!=null && lastElement.getParent() instanceof ErlangAtom)
+        myAtomName = lastElement.getText();
     }
   }
 
@@ -229,7 +237,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
             if (inside || inConsole && !isDot(position) || insideImport) {
               boolean withColon = !insideImport && null == PsiTreeUtil.getParentOfType(position, ErlangFunctionCallExpression.class, false);
               suggestModules(result, position, withColon);
-              add_file_atoms(result, file);
+              add_file_atoms(result, file, myAtomName);
             }
             else if (insideBehaviour) {
               suggestBehaviours(result, position);
@@ -492,8 +500,8 @@ public class ErlangCompletionContributor extends CompletionContributor {
     }
   }
 
-  private static void add_file_atoms(@NotNull CompletionResultSet result, PsiFile file){
-    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(file.getProject(), file.getName());
+  private static void add_file_atoms(@NotNull CompletionResultSet result, PsiFile file, String atomName){
+    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(file.getProject(), file.getName(), atomName);
     for (String name : names) {
       result.addElement(PrioritizedLookupElement.withPriority(
         LookupElementBuilder.create(name).withLookupString(name).withIcon(ErlangIcons.ATOM), ATOM_PRIORITY));
