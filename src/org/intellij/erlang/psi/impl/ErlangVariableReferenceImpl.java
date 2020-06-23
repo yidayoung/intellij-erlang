@@ -57,7 +57,7 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   @Override
   public PsiElement resolveInner() {
     ResolveResult[] resolveResults = multiResolve(false);
-    return resolveResults.length > 0 ? resolveResults[resolveResults.length-1].getElement() : null;
+    return resolveResults.length > 0 ? resolveResults[0].getElement() : null;
   }
 
   @Override

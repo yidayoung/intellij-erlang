@@ -52,6 +52,7 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.*;
 import com.intellij.util.containers.ContainerUtil;
+import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.ErlangParserDefinition;
 import org.intellij.erlang.ErlangStringLiteralEscaper;
 import org.intellij.erlang.ErlangTypes;
@@ -84,6 +85,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.intellij.patterns.PlatformPatterns.psiElement;
+import static com.intellij.patterns.StandardPatterns.instanceOf;
+
 public class ErlangPsiImplUtil {
   public static final Set<String> KNOWN_MACROS = ContainerUtil.set("MODULE", "MODULE_STRING", "FILE", "LINE", "MACHINE", "FUNCTION_NAME", "FUNCTION_ARITY");
   public static final Set<String> BUILT_IN_TYPES = ContainerUtil.set(
@@ -127,7 +130,8 @@ public class ErlangPsiImplUtil {
     if (o.getAtom() == null) return false;
     PsiElement parent = o.getParent();
     return parent instanceof ErlangMaxExpression || parent instanceof ErlangAtomWithArityExpression ||
-      (parent instanceof ErlangTypeRef || parent instanceof ErlangBitType) && !FormatterUtil.isFollowedBy(parent.getNode(), ErlangTypes.ERL_PAR_LEFT);
+      (parent instanceof ErlangTypeRef || parent instanceof ErlangBitType) && !FormatterUtil.isFollowedBy(parent.getNode(), ErlangTypes.ERL_PAR_LEFT)||
+           o.getContainingFile().getFileType() == ErlangFileType.TERMS;
   }
 
   @NotNull
@@ -609,107 +613,83 @@ public class ErlangPsiImplUtil {
       }
       assignment = PsiTreeUtil.getParentOfType(assignment, ErlangAssignmentExpression.class, true);
     }
-    return inCaseAssignmentAllBranch(psiElement, strict);
+    return false;
   }
 
-  public static boolean inCaseAssignment(@NotNull PsiElement psiElement) {
-    return PsiTreeUtil.getParentOfType(psiElement, ErlangCaseExpression.class) != null;
+  public static boolean inCaseBody(@NotNull PsiElement psiElement) {
+    ErlangClauseBody parent = PsiTreeUtil.getParentOfType(psiElement, ErlangClauseBody.class);
+    return parent!=null&& (parent.getParent() instanceof ErlangCrClause);
   }
 
 
   @Nullable
   public static PsiElement findValInCaseAssignmentButNotDefine(@NotNull PsiElement psiElement) {
-    PsiElement parent = psiElement.getParent();
-    PsiElement element = psiElement;
+    PsiElement parent = psiElement;
     while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
-      while (element != null) {
-        if (element instanceof ErlangCaseExpression) {
-          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
-          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, true)) {
-            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
-            for (ErlangCrClause c : crClauseList) {
-              ErlangClauseBody clauseBody = c.getClauseBody();
-              ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
-              boolean thisFindInBody = clauseBody != null && findInClause(clauseBody, psiElement);
-              boolean thisFineInArg = clauseArg != null && findInClause(clauseArg, psiElement);
-              if (!(thisFindInBody | thisFineInArg)) return clauseBody;
-            }
-          }
-        }
-        element = element.getPrevSibling();
+      if (parent instanceof ErlangCaseExpression) {
+        ErlangCaseExpression caseExpression = (ErlangCaseExpression) parent;
+        PsiElement findPlace = findNotDefinePlaceInCase(caseExpression, psiElement);
+        if (findPlace != null) return findPlace;
       }
-      element = parent;
       parent = parent.getParent();
     }
     return null;
-
   }
 
-
-  public static boolean inCaseAssignmentAllBranch(@NotNull PsiElement psiElement, boolean strict){
-    PsiElement parent = psiElement.getParent();
-    PsiElement element = psiElement;
-    while (parent != null && (!(parent instanceof ErlangFunctionClause) || !(parent instanceof ErlangFunction))) {
-      while (element != null) {
-        if (element instanceof ErlangCaseExpression) {
-          ErlangCaseExpression caseExpression = (ErlangCaseExpression) element;
-          if (!PsiTreeUtil.isAncestor(caseExpression, psiElement, strict)) {
-            List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
-            boolean result = true;
-            boolean thisFind;
-            for (ErlangCrClause c : crClauseList) {
-              ErlangClauseBody clauseBody = c.getClauseBody();
-              if (hasThrowCall(clauseBody))
-              {
-                thisFind = true;
-              }
-              else {
-                ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
-                thisFind = ((clauseBody != null) && findInClause(clauseBody, psiElement)) ||
-                                   ((clauseArg != null) && findInClause(clauseArg, psiElement));
-              }
-              result &= thisFind;
-            }
-            if(result){
-              return true;
-            }
+  @Nullable
+  private static PsiElement findNotDefinePlaceInCase(ErlangCaseExpression caseExpression,
+                                                     PsiElement origin){
+    List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+    for (ErlangCrClause c : crClauseList) {
+      ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+      boolean findInArg = clauseArg != null && findInClause(clauseArg, origin);
+      if (findInArg) continue;
+      ErlangClauseBody clauseBody = c.getClauseBody();
+      if (clauseBody != null) {
+        PsiElement[] children = clauseBody.getChildren();
+        boolean find = false;
+        for (PsiElement element : children) {
+          if (element instanceof ErlangAssignmentExpression) {
+            find = inExpression(origin, (ErlangAssignmentExpression) element);
+            if (find) break;
+          }
+          if (element instanceof ErlangCaseExpression) {
+            PsiElement findPlace = findNotDefinePlaceInCase((ErlangCaseExpression)element, origin);
+            if (findPlace!=null) return findPlace;
+            find = true;
+            break;
           }
         }
-        element = element.getPrevSibling();
+        if (!find) return clauseBody;
       }
-      element = parent;
-      parent = parent.getParent();
+    }
+    return null;
+  }
+
+  private static boolean findInClause(ErlangClauseBody clauseBody, PsiElement psiElement,
+                                      @Nullable Set<PsiElement> inElements) {
+    PsiElement[] children = clauseBody.getChildren();
+    for (PsiElement element : children){
+      if (element instanceof ErlangAssignmentExpression){
+        boolean find = inExpression(psiElement, (ErlangAssignmentExpression) element);
+        if (find) return true;
+      }
+      if (element instanceof ErlangCaseExpression){
+          boolean find = findInCase((ErlangCaseExpression)element, psiElement, inElements);
+          if (find) return true;
+      }
     }
     return false;
   }
 
-  private static boolean hasThrowCall(@Nullable ErlangClauseBody clauseBody) {
-    ErlangGlobalFunctionCallExpression globalFunctionCallExpression = PsiTreeUtil.findChildOfType(clauseBody, ErlangGlobalFunctionCallExpression.class);
-
-    if (globalFunctionCallExpression != null &&
-        globalFunctionCallExpression.getModuleRef().getText().equals("erlang") &&
-        globalFunctionCallExpression.getFunctionCallExpression().getName().equals("throw"))
-      //erlang:throw(xx
-      return true;
-    ErlangFunctionCallExpression functionCallExpression = PsiTreeUtil.findChildOfType(clauseBody, ErlangFunctionCallExpression.class);
-    if (functionCallExpression != null &&
-        functionCallExpression.getName().equals("throw") &&
-        !functionCallExpression.getPrevSibling().getText().equals(":"))
-      // throw(xx
-      return true;
-    return false;
-  }
-
-  private static boolean findInClause(ErlangClauseBody clauseBody, PsiElement psiElement) {
-    Collection<ErlangAssignmentExpression> assignmentExpressions = PsiTreeUtil.findChildrenOfType(clauseBody, ErlangAssignmentExpression.class);
-    for (ErlangAssignmentExpression assignmentExpression :assignmentExpressions){
-      Collection<ErlangQVar> qVars = PsiTreeUtil.findChildrenOfType(assignmentExpression.getLeft(), ErlangQVar.class);
-      for (ErlangQVar var : qVars){
-        if (var.getName().equals(psiElement.getText()))
-          return true;
+  private static boolean inExpression(PsiElement psiElement, ErlangAssignmentExpression element) {
+    ErlangExpression left = element.getLeft();
+    Collection<ErlangQVar> qVars = PsiTreeUtil.findChildrenOfType(left, ErlangQVar.class);
+    for (ErlangQVar var :qVars){
+      if (var.getName().equals(psiElement.getText())) {
+        return true;
       }
     }
-    //if code is erlang:throw or throw, means code
     return false;
   }
 
@@ -720,9 +700,31 @@ public class ErlangPsiImplUtil {
         return true;
       }
     }
-
     return false;
   }
+
+
+  private static boolean findInCase(ErlangCaseExpression caseExpression,
+                                    PsiElement psiElement,
+                                    @Nullable Set<PsiElement> inElements) {
+    List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+    for (ErlangCrClause c : crClauseList){
+      boolean find = inCrClause(psiElement, inElements, c);
+      if (!find) return false;
+    }
+    return true;
+  }
+
+  private static boolean inCrClause(PsiElement psiElement,
+                                    @Nullable Set<PsiElement> inElements, ErlangCrClause c) {
+    if (inElements!=null && inElements.contains(c)) return true;
+    ErlangClauseBody clauseBody = c.getClauseBody();
+    ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
+    boolean thisFindInBody = clauseBody != null && findInClause(clauseBody, psiElement, inElements);
+    boolean thisFineInArg = clauseArg != null && findInClause(clauseArg, psiElement);
+    return  ((thisFindInBody | thisFineInArg));
+  }
+
 
   public static boolean inConsoleFile(PsiElement psiElement){
     PsiFile psiFile = psiElement.getContainingFile();
@@ -2116,8 +2118,45 @@ public class ErlangPsiImplUtil {
         ErlangCaseExpression ce1 = PsiTreeUtil.getParentOfType(element, ErlangCaseExpression.class);
         ErlangCaseExpression ce2 = PsiTreeUtil.getParentOfType(origin, ErlangCaseExpression.class);
         if (Comparing.equal(ce1, ce2)) return true;
-        if(PsiTreeUtil.isAncestor(ce1, ce2, true)|| PsiTreeUtil.isAncestor(ce2, ce1, true)) return true;
       }
+    }
+    return false;
+  }
+
+  public static boolean inValScope(@NotNull PsiElement origin, @NotNull PsiElement element) {
+    PsiElement needScope = PsiTreeUtil.findCommonParent(origin, element);
+    if (needScope == null) return false;
+    PsiElement parent = element.getParent();
+    Set<PsiElement> inElements = new HashSet<>();
+    while (parent != null){
+      if (parent instanceof ErlangAssignmentExpression)
+      {
+        ErlangAssignmentExpression assignment = (ErlangAssignmentExpression)parent;
+        boolean find = inElements.contains(parent)||inExpression(element, assignment);
+        PsiElement grandpa = assignment.getParent();
+        if (find){
+          inElements.add(grandpa);
+          if (grandpa instanceof ErlangAssignmentExpression)
+            inElements.add(grandpa.getParent());
+        }
+      }
+      if (parent instanceof ErlangArgumentDefinition || parent instanceof ErlangArgumentDefinitionList ||
+          parent instanceof ErlangClauseBody && inElements.contains(parent)){
+        inElements.add(parent.getParent());
+      }
+      if (parent instanceof ErlangCaseExpression){
+        ErlangCaseExpression caseExpression = (ErlangCaseExpression) parent;
+        boolean inCase = findInCase(caseExpression, element, inElements);
+        if (inCase) inElements.add(parent.getParent());
+      }
+      if (parent instanceof ErlangCrClause && !(inElements.contains(parent))) {
+        ErlangCrClause crClause = (ErlangCrClause) parent;
+        boolean inCr = inCrClause(element, inElements, crClause);
+        if (inCr) inElements.add(parent);
+      }
+      if (inElements.contains(needScope)) return true;
+      if (parent == needScope) return false;
+      parent = parent.getParent();
     }
     return false;
   }
