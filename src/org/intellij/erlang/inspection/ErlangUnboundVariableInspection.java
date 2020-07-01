@@ -56,10 +56,9 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
         }
         else {
           PsiElement resolve = reference.resolve();
-          if (resolve instanceof ErlangQVar && inCaseBody(resolve))
+          if (resolve instanceof ErlangQVar && getClauseScope(resolve) != null)
           {
-            if (fromTheSameCaseExpression(o,resolve)) return;
-            if (inValScope(o,resolve)) return;
+            if (findValInClauseButNotDefine(resolve, o) == null) return;
             registerProblem(holder, o, "Variable " + "'" + o.getText() + "' is bound in case, but not all branch bound", new ErlangIntroduceVariableInCaseQuickFix());
           }
         }
@@ -120,7 +119,7 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
       PsiReference reference = psiElement.getReference();
       PsiElement resolve = reference == null ? null:reference.resolve();
       if (resolve ==null) return;
-      PsiElement anchor = findValInCaseAssignmentButNotDefine(resolve);
+      PsiElement anchor = findValInClauseButNotDefine(resolve, psiElement);
       PsiElement parent = anchor == null?null:anchor.getParent();
       if (anchor != null && parent != null) {
         Editor editor = PsiUtilBase.findEditor(anchor);

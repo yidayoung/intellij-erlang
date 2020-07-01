@@ -26,13 +26,18 @@ import org.intellij.erlang.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
+import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.inDifferentClause;
 
 public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingReferenceBase<ErlangQVar> {
+  private final PsiElement myScope;
+
   public ErlangVariableReferenceImpl(@NotNull ErlangQVar element, TextRange range) {
     super(element, range);
+    myScope = getClauseScope(element);
   }
 
   @NotNull
@@ -43,6 +48,7 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
     ErlangCompositeElement place = ObjectUtils.chooseNotNull(lc, myElement);
     ResolveUtil.treeWalkUp(place, processor);
     List<ErlangQVar> result = processor.getAllResults();
+    result = filterResult(result);
     if (!result.isEmpty()) return PsiElementResolveResult.createResults(result);
 
     ErlangModule module = getErlangModule();
@@ -50,6 +56,7 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
     module.processDeclarations(processor, ResolveState.initial(), module, module);
 
     List<ErlangQVar> allResults = processor.getAllResults();
+    allResults = filterResult(allResults);
     return PsiElementResolveResult.createResults(allResults);
   }
 
@@ -57,18 +64,45 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   @Override
   public PsiElement resolveInner() {
     ResolveResult[] resolveResults = multiResolve(false);
-    return resolveResults.length > 0 ? resolveResults[0].getElement() : null;
+    if (resolveResults.length == 0) return null;
+    PsiElement result = null;
+    for (ResolveResult r : resolveResults) {
+      PsiElement element = r.getElement();
+      if (element != null){
+        if (myScope != null && getClauseScope(element) != null) {
+          if (fromTheSameClause(myElement, element)) return element;
+        }
+        int textOffset = element.getTextOffset();
+        if (result == null || result.getTextOffset() > textOffset) {
+          result = r.getElement();
+        }
+      }
+    }
+    return result;
+  }
+
+  @NotNull
+  private ArrayList<ErlangQVar> filterResult(List<ErlangQVar> results) {
+    ArrayList<ErlangQVar> resolveResults2 = new ArrayList<>();
+    if (myScope != null){
+      for (ErlangQVar element : results){
+        if (element != null && getClauseScope(element) != null){
+          if (inDifferentClause(myElement, element)) continue;
+          if (inDifferentFun(myElement, element)) continue;
+        }
+        resolveResults2.add(element);
+      }
+    }
+    else
+      resolveResults2 = new ArrayList<>(results);
+    return resolveResults2;
   }
 
   @Override
   public boolean isReferenceTo(@NotNull PsiElement element) {
     if (!(element instanceof ErlangQVar)) return false;
-    for (ResolveResult result : multiResolve(false)) {
-      PsiElement resultElement = result.getElement();
-      if (resultElement instanceof ErlangQVar && resultElement.isEquivalentTo(element)) return true;
-    }
-    if (fromTheSameCaseExpression(getElement(), element)) return true;
-    return false;
+    if (inDifferentFun(myElement, element)) return false;
+    return true;
   }
 
   @Nullable
