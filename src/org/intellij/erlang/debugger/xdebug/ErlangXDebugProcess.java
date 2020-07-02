@@ -272,19 +272,18 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
   private void setModulesToInterpret() {
     ErlangRunConfigurationBase<?> runConfiguration = getRunConfiguration();
     Collection<ErlangFile> erlangModules = new ArrayList<>();
-    if(runConfiguration instanceof ErlangRemoteDebugRunConfiguration) {
-      ErlangRemoteDebugRunConfiguration runConfig = (ErlangRemoteDebugRunConfiguration) getRunConfiguration();
-      switch (runConfig.getInterpretScope()) {
-        case ErlangRemoteDebugRunConfiguration.IN_BREAK_POINT_FILE:
+    if(runConfiguration.getInterpretScope() != ErlangRunConfigurationBase.SCOPE_NONE) {
+      switch (runConfiguration.getInterpretScope()) {
+        case ErlangRunConfigurationBase.SCOPE_IN_BREAK_POINT_FILE:
           return;
-        case ErlangRemoteDebugRunConfiguration.IN_MODULE: {
-          Module tarModule = runConfig.getConfigurationModule().getModule();
+        case ErlangRunConfigurationBase.SCOPE_IN_MODULE: {
+          Module tarModule = runConfiguration.getConfigurationModule().getModule();
           assert tarModule != null;
-          erlangModules = ErlangModulesUtil.getErlangModules(tarModule, runConfig.isUseTestCodePath());
+          erlangModules = ErlangModulesUtil.getErlangModules(tarModule, runConfiguration.isUseTestCodePath());
           break;
         }
-        case ErlangRemoteDebugRunConfiguration.IN_PROJECT: {
-          erlangModules = ErlangModulesUtil.getErlangModules(runConfig.getProject());
+        case ErlangRunConfigurationBase.SCOPE_IN_PROJECT: {
+          erlangModules = ErlangModulesUtil.getErlangModules(runConfiguration.getProject());
           break;
         }
       }

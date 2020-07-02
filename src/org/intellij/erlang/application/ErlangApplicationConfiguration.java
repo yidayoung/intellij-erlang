@@ -46,6 +46,7 @@ public class ErlangApplicationConfiguration extends ErlangRunConfigurationBase<E
 
   public ErlangApplicationConfiguration(Project project, String name, ConfigurationType configurationType) {
     super(name, new ErlangModuleBasedConfiguration(project), configurationType.getConfigurationFactories()[0]);
+    setInterpretScope(ErlangRunConfigurationBase.SCOPE_IN_BREAK_POINT_FILE);
   }
 
   @NotNull
@@ -99,7 +100,6 @@ public class ErlangApplicationConfiguration extends ErlangRunConfigurationBase<E
   public void setErlFlags(String erlFlags) {
     myErlFlags = erlFlags;
   }
-
   @Override
   public void checkConfiguration() throws RuntimeConfigurationException {
     super.checkConfiguration();

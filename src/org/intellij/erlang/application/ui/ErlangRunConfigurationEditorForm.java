@@ -38,6 +38,7 @@ public class ErlangRunConfigurationEditorForm extends ErlangDebuggableRunConfigu
   private HideableTitledPanel myDebugOptionsHideablePanel;
   private TextFieldWithBrowseButton myWorkingDirectoryComponent;
   private JCheckBox myUseTestsCodePathCheckBox;
+  private JComboBox<String> myInterpretScope;
 
   public ErlangRunConfigurationEditorForm(){
     ErlangUiUtil.installWorkingDirectoryChooser(myWorkingDirectoryComponent, null);
@@ -53,6 +54,7 @@ public class ErlangRunConfigurationEditorForm extends ErlangDebuggableRunConfigu
     myErlFlagsTextField.setText(configuration.getErlFlags());
     myWorkingDirectoryComponent.setText(configuration.getWorkDirectory());
     myUseTestsCodePathCheckBox.setSelected(configuration.isUseTestCodePath());
+    myInterpretScope.setSelectedIndex(configuration.getInterpretScope());
   }
 
   @Override
@@ -64,6 +66,7 @@ public class ErlangRunConfigurationEditorForm extends ErlangDebuggableRunConfigu
     configuration.setStopErlang(myStopErlangInterpreterCheckBox.isSelected());
     configuration.setWorkDirectory(myWorkingDirectoryComponent.getText());
     configuration.setUseTestCodePath(myUseTestsCodePathCheckBox.isSelected());
+    configuration.setInterpretScope(myInterpretScope.getSelectedIndex());
   }
 
   @NotNull

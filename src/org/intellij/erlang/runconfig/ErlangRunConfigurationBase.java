@@ -45,8 +45,23 @@ public abstract class ErlangRunConfigurationBase<RunningState extends ErlangRunn
   private ErlangDebugOptions myDebugOptions = new ErlangDebugOptions();
   private String myWorkDirectory;
 
+  private int myInterpretScope = SCOPE_NONE;
+
+  public static final int SCOPE_NONE = -1;
+  public static final int SCOPE_IN_BREAK_POINT_FILE = 0;
+  public static final int SCOPE_IN_MODULE = 1;
+  public static final int SCOPE_IN_PROJECT = 2;
+
   public ErlangRunConfigurationBase(String name, ErlangModuleBasedConfiguration configurationModule, ConfigurationFactory factory) {
     super(name, configurationModule, factory);
+  }
+
+  public int getInterpretScope() {
+    return myInterpretScope;
+  }
+
+  public void setInterpretScope(int interpretScope) {
+    myInterpretScope = interpretScope;
   }
 
   @NotNull

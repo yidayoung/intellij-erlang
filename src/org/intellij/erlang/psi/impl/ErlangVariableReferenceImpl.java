@@ -85,6 +85,7 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   @Override
   public boolean isReferenceTo(@NotNull PsiElement element) {
     if (!(element instanceof ErlangQVar)) return false;
+    if (myElement.equals(element)) return false;
     if (inDifferentFun(myElement, element)) return false;
     if (inDifferentFunction(myElement, element)) return false;
     if (inDifferentLc(myElement, element)) return false;
