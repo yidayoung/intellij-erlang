@@ -2144,22 +2144,14 @@ public class ErlangPsiImplUtil {
     return stub != null ? StringUtil.notNullize(stub.getName()) : null;
   }
 
-  public static boolean fromTheSameClause(@NotNull PsiElement origin, @NotNull PsiElement element) {
+  public static boolean fromTheSameCaseExpression(@NotNull PsiElement origin, @NotNull PsiElement element) {
     if (element instanceof ErlangQVar && Comparing.equal(element.getText(), element.getText())) {
       ErlangCompositeElement cr2 = PsiTreeUtil.getParentOfType(element, ErlangCrClause.class);
       ErlangCompositeElement cr1 = PsiTreeUtil.getParentOfType(origin, ErlangCrClause.class);
       if (cr1 != null && cr2 != null) {
-        if (PsiTreeUtil.isAncestor(cr2, cr1, false)) return true;
-      }
-      ErlangCompositeElement if2 = PsiTreeUtil.getParentOfType(element, ErlangIfClause.class);
-      ErlangCompositeElement if1 = PsiTreeUtil.getParentOfType(origin, ErlangIfClause.class);
-      if (if1 != null && if2 != null) {
-        if (PsiTreeUtil.isAncestor(if2, if1, false)) return true;
-      }
-      ErlangCompositeElement com2 = PsiTreeUtil.getParentOfType(element, ErlangListComprehension.class);
-      ErlangCompositeElement com1 = PsiTreeUtil.getParentOfType(origin, ErlangListComprehension.class);
-      if (com1 != null && com2 != null) {
-        if (PsiTreeUtil.isAncestor(com2, com1, false)) return true;
+        ErlangCaseExpression ce1 = PsiTreeUtil.getParentOfType(element, ErlangCaseExpression.class);
+        ErlangCaseExpression ce2 = PsiTreeUtil.getParentOfType(origin, ErlangCaseExpression.class);
+        if (Comparing.equal(ce1, ce2)) return true;
       }
     }
     return false;
@@ -2167,24 +2159,51 @@ public class ErlangPsiImplUtil {
   /**
    * only when origin and element all in Clause, then you can call this fun
    */
-  public static boolean inDifferentClause(@NotNull PsiElement origin, @NotNull PsiElement element) {
+  public static boolean inOneExpDifferentClause(@NotNull PsiElement origin, @NotNull PsiElement element) {
     if (element instanceof ErlangQVar && Comparing.equal(element.getText(), element.getText())) {
       PsiElement commonParent = PsiTreeUtil.findCommonParent(origin, element);
-      if (commonParent instanceof ErlangClauseBody) commonParent = commonParent.getParent();
-      if (commonParent instanceof ErlangBeginEndBody) commonParent = commonParent.getParent().getParent();
-      if (PsiTreeUtil.instanceOf(commonParent, ErlangFunClause.class,
-                                 ErlangCrClause.class, ErlangIfClause.class,
-                                 ErlangFunctionClause.class, ErlangListComprehension.class))
-        return false;
+      if (commonParent instanceof ErlangCaseExpression && notInCaseArg((ErlangCaseExpression)commonParent, element)) return true;
+      if (commonParent instanceof ErlangIfExpression) return true;
+      if (commonParent instanceof ErlangReceiveExpression) return true;
     }
-    return true;
+    return false;
+  }
+
+  private static boolean notInCaseArg(ErlangCaseExpression caseExpression, PsiElement element) {
+    List<ErlangCrClause> crClauseList = caseExpression.getCrClauseList();
+    for (ErlangCrClause clause: crClauseList){
+      if (PsiTreeUtil.isAncestor(clause, element, true)) return true;
+    }
+    return false;
+  }
+  public static boolean beforeDefine(@NotNull PsiElement origin, @NotNull PsiElement element) {
+    if (PsiTreeUtil.getParentOfType(element, ErlangLcExpression.class) != null) return false;
+    return element.getTextOffset() > origin.getTextOffset();
   }
 
   public static boolean inDifferentFun(@NotNull PsiElement origin, @NotNull PsiElement element) {
-    ErlangCompositeElement fun2 = PsiTreeUtil.getParentOfType(element, ErlangFunClause.class);
-    ErlangCompositeElement fun1 = PsiTreeUtil.getParentOfType(origin, ErlangFunClause.class);
-    if (fun1 != null && fun2 != null) {
-      if (!PsiTreeUtil.isAncestor(fun2, fun1, false)) return true;
+    return inDifferentClass(origin, element, ErlangFunClause.class, false);
+  }
+  public static boolean inDifferentLc(@NotNull PsiElement origin, @NotNull PsiElement element) {
+    return inDifferentClass(origin, element, ErlangListComprehension.class, false);
+  }
+  public static boolean inDifferentFunction(@NotNull PsiElement origin, @NotNull PsiElement element) {
+    return inDifferentClass(origin, element, ErlangFunctionClause.class, true);
+  }
+
+  private static <T extends PsiElement> boolean inDifferentClass(@NotNull PsiElement origin,
+                                                                 @NotNull PsiElement element,
+                                                                 Class<T> aClass,
+                                                                 boolean strict) {
+    PsiElement element1 = PsiTreeUtil.getParentOfType(origin, aClass);
+    PsiElement element2 = PsiTreeUtil.getParentOfType(element, aClass);
+    if (element2 != null && element1 != null) {
+      if (strict){
+        if (!element2.equals(element1)) return true;
+      }
+      else{
+        if (!PsiTreeUtil.isAncestor(element2, element1, false)) return true;
+      }
     }
     return false;
   }

@@ -26,18 +26,20 @@ import org.intellij.erlang.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
-import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.inDifferentClause;
 
 public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingReferenceBase<ErlangQVar> {
-  private final PsiElement myScope;
+  private final boolean inClause;
 
   public ErlangVariableReferenceImpl(@NotNull ErlangQVar element, TextRange range) {
     super(element, range);
-    myScope = getClauseScope(element);
+    inClause = getClauseScope(element) != null;
   }
 
   @NotNull
@@ -65,43 +67,27 @@ public class ErlangVariableReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   public PsiElement resolveInner() {
     ResolveResult[] resolveResults = multiResolve(false);
     if (resolveResults.length == 0) return null;
-    PsiElement result = null;
-    for (ResolveResult r : resolveResults) {
-      PsiElement element = r.getElement();
-      if (element != null){
-        if (myScope != null && getClauseScope(element) != null) {
-          if (fromTheSameClause(myElement, element)) return element;
-        }
-        int textOffset = element.getTextOffset();
-        if (result == null || result.getTextOffset() > textOffset) {
-          result = r.getElement();
-        }
-      }
-    }
-    return result;
+    if (resolveResults.length > 1) Arrays.sort(resolveResults, Comparator.comparingInt(o -> Objects.requireNonNull(o.getElement()).getTextOffset()));
+    return resolveResults[0].getElement();
   }
 
   @NotNull
-  private ArrayList<ErlangQVar> filterResult(List<ErlangQVar> results) {
-    ArrayList<ErlangQVar> resolveResults2 = new ArrayList<>();
-    if (myScope != null){
-      for (ErlangQVar element : results){
-        if (element != null && getClauseScope(element) != null){
-          if (inDifferentClause(myElement, element)) continue;
-          if (inDifferentFun(myElement, element)) continue;
-        }
-        resolveResults2.add(element);
-      }
-    }
-    else
-      resolveResults2 = new ArrayList<>(results);
-    return resolveResults2;
+  private List<ErlangQVar> filterResult(List<ErlangQVar> results) {
+    return results.stream().filter(
+      element ->
+        !inDifferentLc(myElement, element) &&
+        !inDifferentFun(myElement, element) &&
+        !beforeDefine(myElement, element) &&
+        (!inClause|| !inOneExpDifferentClause(myElement, element))
+    ).collect(Collectors.toList());
   }
 
   @Override
   public boolean isReferenceTo(@NotNull PsiElement element) {
     if (!(element instanceof ErlangQVar)) return false;
     if (inDifferentFun(myElement, element)) return false;
+    if (inDifferentFunction(myElement, element)) return false;
+    if (inDifferentLc(myElement, element)) return false;
     return true;
   }
 
