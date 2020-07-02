@@ -2156,9 +2156,7 @@ public class ErlangPsiImplUtil {
     }
     return false;
   }
-  /**
-   * only when origin and element all in Clause, then you can call this fun
-   */
+
   public static boolean inOneExpDifferentClause(@NotNull PsiElement origin, @NotNull PsiElement element) {
     if (element instanceof ErlangQVar && Comparing.equal(element.getText(), element.getText())) {
       PsiElement commonParent = PsiTreeUtil.findCommonParent(origin, element);
