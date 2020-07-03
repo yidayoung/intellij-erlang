@@ -26,6 +26,7 @@ import com.intellij.psi.search.TextOccurenceProcessor;
 import com.intellij.psi.search.UsageSearchContext;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.Processor;
+import org.intellij.erlang.psi.ErlangAtom;
 import org.intellij.erlang.psi.ErlangQAtom;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +45,7 @@ public class ErlangAtomSearch extends QueryExecutorBase<PsiReference, References
     String name = ErlangPsiImplUtil.getName((ErlangQAtom) element);
     if (StringUtil.isEmpty(name)) return;
 
-    SearchScope searchScope = parameters.getEffectiveSearchScope();
+    SearchScope searchScope = parameters.getScopeDeterminedByUser();
     MyCodeOccurenceProcessor processor = new MyCodeOccurenceProcessor(element, consumer);
     short searchContext = UsageSearchContext.IN_CODE | UsageSearchContext.IN_STRINGS;
     PsiSearchHelper.getInstance(element.getProject()).processElementsWithWord(processor, searchScope, name, searchContext, true);
@@ -61,10 +62,12 @@ public class ErlangAtomSearch extends QueryExecutorBase<PsiReference, References
     }
 
     public boolean execute(@NotNull PsiElement element, int offsetInElement) {
-      PsiReference ref = element.getReference();
-      if (ref != null && ref.isReferenceTo(myElement)) {
-        return myPsiReferenceProcessor.process(ref);
-      }
+      if (element instanceof ErlangQAtom && element.getText().equals(myElement.getText()) && element.getReference() != null)
+        myPsiReferenceProcessor.process(element.getReference());
+//      PsiReference ref = element.getReference();
+//      if (ref != null && ref.isReferenceTo(myElement)) {
+//        return myPsiReferenceProcessor.process(ref);
+//      }
       return true;
     }
   }

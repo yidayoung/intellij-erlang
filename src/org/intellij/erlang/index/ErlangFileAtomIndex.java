@@ -17,10 +17,15 @@
 package org.intellij.erlang.index;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleUtilCore;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.ProjectScope;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.indexing.*;
 import com.intellij.util.io.DataExternalizer;
@@ -29,7 +34,6 @@ import com.intellij.util.io.IOUtil;
 import com.intellij.util.io.KeyDescriptor;
 import gnu.trove.THashMap;
 import org.intellij.erlang.ErlangFileType;
-import org.intellij.erlang.jps.builder.ErlangBuilder;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
@@ -40,30 +44,74 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 
-public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, Map<String, Integer>> {
-  private static final ID<String, Map<String, Integer>> INDEX = ID.create("erlang.file_atom.index");
+public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, ErlangFileAtomIndex.ErlangFileAtoms> {
+  private static final ID<String, ErlangFileAtoms> INDEX = ID.create("erlang.file_atom.index");
   private static final int INDEX_VERSION = 1;
   @NotNull
   @Override
-  public ID<String, Map<String, Integer>> getName() {
+  public ID<String, ErlangFileAtoms> getName() {
     return INDEX;
   }
-  static final Logger LOG = Logger.getInstance(ErlangFileAtomIndex.class);
+  private static final Logger LOG = Logger.getInstance(ErlangFileAtomIndex.class);
+
+  public static class ErlangFileAtoms{
+    public ErlangFileAtoms(Set<String> onceAtoms, Set<String> moreThanOnceAtoms) {
+      myOnceAtoms = onceAtoms;
+      myMoreThanOnceAtoms = moreThanOnceAtoms;
+    }
+
+    public Set<String> getOnceAtoms() {
+      return myOnceAtoms;
+    }
+
+    private Set<String> myOnceAtoms;
+
+    public Set<String> getMoreThanOnceAtoms() {
+      return myMoreThanOnceAtoms;
+    }
+
+    private Set<String> myMoreThanOnceAtoms;
+    public ErlangFileAtoms() {
+      this.myOnceAtoms = new TreeSet<>();
+      this.myMoreThanOnceAtoms = new TreeSet<>();
+    }
+    public void insert(String atomName){
+      if (myMoreThanOnceAtoms.contains(atomName)) return;
+      if (myOnceAtoms.contains(atomName)){
+        myMoreThanOnceAtoms.add(atomName);
+        myOnceAtoms.remove(atomName);
+      }
+      myOnceAtoms.add(atomName);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof ErlangFileAtoms)) return false;
+      ErlangFileAtoms obj2 = (ErlangFileAtoms) obj;
+      if (!(myOnceAtoms.equals(obj2.myOnceAtoms))) return false;
+      if (!(myMoreThanOnceAtoms.equals(obj2.myMoreThanOnceAtoms))) return false;
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+  }
   @NotNull
   @Override
-  public DataIndexer<String, Map<String, Integer>, FileContent> getIndexer() {
+  public DataIndexer<String, ErlangFileAtoms, FileContent> getIndexer() {
     return inputData -> {
-      Map<String, Map<String, Integer>> result = new THashMap<>();
-      Map<String, Integer> fileAtoms = new THashMap<>();
+      Map<String, ErlangFileAtoms> result = new THashMap<>();
+      ErlangFileAtoms fileAtoms = new ErlangFileAtoms();
       PsiFile file = inputData.getPsiFile();
       if (file instanceof ErlangFile) {
         if (file.getFileType() == ErlangFileType.MODULE) {
           file.accept(new ErlangRecursiveVisitor() {
             @Override
             public void visitQAtom(@NotNull ErlangQAtom o) {
-              if (ErlangPsiImplUtil.standaloneAtom(o)){
-                Integer old = fileAtoms.get(o.getText()) == null ? 0:fileAtoms.get(o.getText());
-                fileAtoms.put(o.getText(), old+1);
+              if (ErlangPsiImplUtil.standaloneAtom(o) && o.getAtom() != null){
+                fileAtoms.insert(o.getAtom().getName());
               }
             }
           });
@@ -77,8 +125,7 @@ public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, Map<Str
               PsiElement nameQAtom = configExpression instanceof ErlangConfigExpression ? configExpression.getFirstChild() : null;
               ErlangAtom atom = nameQAtom instanceof ErlangQAtom ? ((ErlangQAtom) nameQAtom).getAtom() : null;
               if(atom != null) {
-                Integer old = fileAtoms.get(atom.getName()) == null ? 0:fileAtoms.get(atom.getName());
-                fileAtoms.put(atom.getText(), old+1);
+                fileAtoms.insert(atom.getName());
               }
             }
           });
@@ -97,32 +144,38 @@ public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, Map<Str
 
   @NotNull
   @Override
-  public DataExternalizer<Map<String, Integer>> getValueExternalizer() {
-    return new DataExternalizer<Map<String, Integer>>(){
-      @Override
-      public void save(@NotNull DataOutput out, Map<String, Integer> value) throws IOException {
-        out.writeInt(value.size());
-        value.forEach((s, integer) -> {
-          try {
-            IOUtil.writeUTF(out, s);
-            IOUtil.writeUTF(out, integer.toString());
-          }
-          catch (IOException e) {
-            LOG.error("ErlangFileAtom save err", e);
-          }
-        });
+  public DataExternalizer<ErlangFileAtoms> getValueExternalizer() {
+    return new DataExternalizer<ErlangFileAtoms>(){
+      private void writeStringSet(@NotNull DataOutput out, Set<String> set) throws IOException {
+        out.writeInt(set.size());
+        for (String s : set){
+          IOUtil.writeUTF(out, s);
+        }
+      }
+
+      private Set<String> readStringSet(@NotNull DataInput in) throws IOException {
+        int size = in.readInt();
+        Set<String> strings = new TreeSet<>();
+        for (int i = 0; i < size; i++) {
+          String key = IOUtil.readUTF(in);
+          strings.add(key);
+        }
+        return strings;
       }
 
       @Override
-      public Map<String, Integer> read(@NotNull DataInput in) throws IOException {
-        int size = in.readInt();
-        Map<String, Integer> value = new HashMap<>();
-        for (int i = 0; i < size; i++) {
-          String key = IOUtil.readUTF(in);
-          Integer count = Integer.parseInt(IOUtil.readUTF(in));
-          value.put(key, count);
-        }
-        return value;
+      public void save(@NotNull DataOutput out, ErlangFileAtoms value) throws IOException {
+        Set<String> moreThanOnceAtoms = value.getMoreThanOnceAtoms();
+        writeStringSet(out, moreThanOnceAtoms);
+        Set<String> onceAtoms = value.getOnceAtoms();
+        writeStringSet(out, onceAtoms);
+      }
+
+      @Override
+      public ErlangFileAtoms read(@NotNull DataInput in) throws IOException {
+        Set<String> moreThanOnceAtoms = readStringSet(in);
+        Set<String> onceAtoms = readStringSet(in);
+        return new ErlangFileAtoms(onceAtoms, moreThanOnceAtoms);
       }
     };
   }
@@ -143,21 +196,23 @@ public class ErlangFileAtomIndex extends FileBasedIndexExtension<String, Map<Str
     return true;
   }
 
-
   public static List<String> getFileAtoms(Project project, String fileName){
-    return getFileAtoms(project, fileName, null);
-  }
-
-  public static List<String> getFileAtoms(Project project, String fileName, @Nullable String exceptIfOnceOccurAtom){
-    List<Map<String, Integer>> values = FileBasedIndex.getInstance().getValues(INDEX, fileName, GlobalSearchScope.allScope(project));
+    PsiFile[] files = FilenameIndex.getFilesByName(project, fileName, GlobalSearchScope.projectScope(project));
     ArrayList<String> results = new ArrayList<>();
-    for (Map<String, Integer> v : values){
-      Set<String> atoms = v.keySet();
-      Integer count = v.get(exceptIfOnceOccurAtom);
-      if(count != null && count == 1)
-      {
-        atoms.remove(exceptIfOnceOccurAtom);
-      }
+    for (PsiFile file : files){
+      ContainerUtil.addAllNotNull(results, getFileAtoms(file, null));
+    }
+    return results;
+  }
+  public static List<String> getFileAtoms(PsiFile file, @Nullable String exceptIfOnceOccurAtom){
+    Module module = ModuleUtilCore.findModuleForFile(file.getOriginalFile());
+    GlobalSearchScope scope = module != null ? GlobalSearchScope.moduleScope(module) : ProjectScope.getProjectScope(file.getProject());
+    List<ErlangFileAtoms> values = FileBasedIndex.getInstance().getValues(INDEX, file.getName(), scope);
+    ArrayList<String> results = new ArrayList<>();
+    for (ErlangFileAtoms v : values){
+      ContainerUtil.addAllNotNull(results, v.getMoreThanOnceAtoms());
+      Set<String> atoms = v.getOnceAtoms();
+      if (exceptIfOnceOccurAtom !=null) atoms.remove(exceptIfOnceOccurAtom);
       ContainerUtil.addAllNotNull(results, atoms);
     }
     return results;

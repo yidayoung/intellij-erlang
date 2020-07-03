@@ -26,6 +26,7 @@ import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.ProjectAndLibrariesScope;
 import com.intellij.util.ArrayUtil;
@@ -51,6 +52,12 @@ public class ErlangModuleReferenceImpl extends ErlangQAtomBasedReferenceImpl {
   public PsiElement resolveInner() {
     GlobalSearchScope scope = getSearchScope();
     List<ErlangModule> modules = ErlangModuleIndex.getModulesByName(myElement.getProject(), myReferenceName, scope);
+    if (modules.size() == 0 && myReferenceName.startsWith("data_")){
+      PsiFile[] configFiles = FilenameIndex.getFilesByName(myElement.getProject(), myReferenceName + ".config", scope);
+      if (configFiles.length == 0)
+        configFiles = FilenameIndex.getFilesByName(myElement.getProject(), myReferenceName.replace("data_", "") + ".config", scope);
+      if (configFiles.length > 0) return configFiles[0];
+    }
     if (modules.size() > 1) {
       ContainerUtil.sort(modules, new ModuleResolutionComparator());
     }

@@ -65,6 +65,7 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
       }
       else {
         PsiFile[] configFiles = FilenameIndex.getFilesByName(project, configModule + ".config", GlobalSearchScope.allScope(project));
+        if (configFiles.length == 0) configFiles = FilenameIndex.getFilesByName(project, configModule.replace("data_", "") + ".config", GlobalSearchScope.allScope(project));
         if (configFiles.length > 0) {
           PsiFile configFile = configFiles[0];
           List<ErlangTupleExpression> configSections = ErlangTermFileUtil.getConfigSections(configFile, myElement.getText());

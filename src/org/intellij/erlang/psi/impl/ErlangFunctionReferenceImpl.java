@@ -18,6 +18,7 @@ package org.intellij.erlang.psi.impl;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
+import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ArrayUtil;
@@ -68,6 +69,13 @@ public class ErlangFunctionReferenceImpl extends ErlangPsiPolyVariantCachingRefe
         ErlangOperatorTable.canBeInvokedAsFunction(moduleName, myReferenceName, myArity) ||
         myReferenceName.equals(ErlangBifTable.MODULE_INFO) && (myArity == 1 || myArity == 0)
       );
+      if (moduleName.startsWith("data_") && !resolveToCallSite && explicitFunction == null){
+        GlobalSearchScope scope = GlobalSearchScope.projectScope(myElement.getProject());
+        PsiFile[] configFiles = FilenameIndex.getFilesByName(myElement.getProject(), moduleName + ".config", scope);
+        if (configFiles.length == 0)
+          configFiles = FilenameIndex.getFilesByName(myElement.getProject(), moduleName.replace("data_", "") + ".config", scope);
+        if (configFiles.length > 0) return configFiles[0];
+      }
       return resolveToCallSite ? getElement() : explicitFunction;
     }
 

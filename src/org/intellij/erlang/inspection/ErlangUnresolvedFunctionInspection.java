@@ -27,6 +27,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.ContainerUtil;
 import org.apache.commons.lang3.ObjectUtils;
 import org.intellij.erlang.bif.ErlangBifTable;
+import org.intellij.erlang.index.ErlangFileAtomIndex;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.quickfixes.ErlangCreateFunctionQuickFix;
@@ -68,6 +69,18 @@ public class ErlangUnresolvedFunctionInspection extends ErlangInspectionBase {
                                      functionReference.getName(),
                                      functionReference.getArity()))
               return;
+          }
+          if (resolve instanceof ErlangFile){
+            ErlangArgumentList argumentList = call.getArgumentList();
+            List<ErlangExpression> expressionList = argumentList.getExpressionList();
+            if (expressionList.size() ==1)
+            {
+              PsiElement[] children = expressionList.get(0).getChildren();
+              if (children.length == 1 && children[0] instanceof ErlangQAtom) {
+                checkConfigKey(holder, (ErlangFile) resolve, (ErlangQAtom) children[0]);
+              }
+            }
+            return;
           }
         }
 
@@ -125,6 +138,14 @@ public class ErlangUnresolvedFunctionInspection extends ErlangInspectionBase {
       }
     };
   }
+
+  private void checkConfigKey(@NotNull ProblemsHolder holder, ErlangFile config, ErlangQAtom atom) {
+    List<String> fileAtoms = ErlangFileAtomIndex.getFileAtoms(config, null);
+    if (fileAtoms.contains(atom.getText())) return;
+
+    registerProblem(holder, atom, "UnDefined Key: " + atom.getText() + " in config file " + config.getName());
+  }
+
 
   private static ErlangCreateFunctionQuickFix createFix(@NotNull ErlangFunctionCallExpression call,
                                                         @NotNull String fixMessage) {

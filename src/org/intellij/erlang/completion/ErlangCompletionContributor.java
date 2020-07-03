@@ -84,6 +84,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
   private String myGetCallModule;
   @Nullable
   private String myMapsVarName;
+  @Nullable
   private String myAtomName;
 
   @Override
@@ -501,7 +502,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
   }
 
   private static void add_file_atoms(@NotNull CompletionResultSet result, PsiFile file, String atomName){
-    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(file.getProject(), file.getName(), atomName);
+    Collection<String> names = ErlangFileAtomIndex.getFileAtoms(file, atomName);
     for (String name : names) {
       result.addElement(PrioritizedLookupElement.withPriority(
         LookupElementBuilder.create(name).withLookupString(name).withIcon(ErlangIcons.ATOM), ATOM_PRIORITY));
