@@ -1,0 +1,5 @@
+get_role_info().
+--
+erlang:length(A).
+--
+data_test:get(test_key)
