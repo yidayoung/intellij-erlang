@@ -32,7 +32,6 @@ import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.TitledSeparator;
 import org.intellij.erlang.dialyzer.DialyzerSettings;
 import org.intellij.erlang.emacs.EmacsSettings;
-import org.intellij.erlang.maps.MapsHrlSettings;
 import org.intellij.erlang.rebar.settings.RebarConfigurationForm;
 import org.intellij.erlang.rebar.settings.RebarSettings;
 import org.intellij.erlang.sdk.ErlangSdkForSmallIdes;
@@ -59,18 +58,15 @@ public class ErlangExternalToolsConfigurable implements SearchableConfigurable, 
   private final EmacsSettings myEmacsSettings;
   private final RebarSettings myRebarSettings;
   private final DialyzerSettings myDialyzerSettings;
-  private final MapsHrlSettings myMapsHrlSettings;
   private TextFieldWithBrowseButton mySdkPathSelector;
   private TitledSeparator mySdkTitledSeparator;
   private JLabel mySdkPathLabel;
-  private JTextField myMapsDefineHrlFiles;
 
   public ErlangExternalToolsConfigurable(@NotNull Project project) {
     myProject = project;
     myRebarSettings = RebarSettings.getInstance(project);
     myEmacsSettings = EmacsSettings.getInstance(project);
     myDialyzerSettings = DialyzerSettings.getInstance(project);
-    myMapsHrlSettings = MapsHrlSettings.getInstance(project);
     myEmacsPathSelector.addBrowseFolderListener("Select Emacs Executable", "", null, FileChooserDescriptorFactory.createSingleLocalFileDescriptor());
     myPltPathSelector.addBrowseFolderListener("Select Dialyzer PLT", "", null, FileChooserDescriptorFactory.createSingleLocalFileDescriptor());
     mySdkPathSelector.addBrowseFolderListener("Select Erlang SDK Path", "", null, FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Select Erlang SDK Root"));
@@ -149,8 +145,7 @@ public class ErlangExternalToolsConfigurable implements SearchableConfigurable, 
          !myRebarSettings.getRebarPath().equals(myRebarConfigurationForm.getPath())
       || !myEmacsSettings.getEmacsPath().equals(emacsSelectedPath)
       || !myDialyzerSettings.getCurrentPltPath().equals(myPltPathSelector.getText())
-      || !StringUtil.notNullize(ErlangSdkType.getSdkPath(myProject)).equals(mySdkPathSelector.getText())
-      || !myMapsHrlSettings.gerAllHrl().equals(myMapsDefineHrlFiles.getText());
+      || !StringUtil.notNullize(ErlangSdkType.getSdkPath(myProject)).equals(mySdkPathSelector.getText());
   }
 
   @Override
@@ -158,7 +153,6 @@ public class ErlangExternalToolsConfigurable implements SearchableConfigurable, 
     myRebarSettings.setRebarPath(myRebarConfigurationForm.getPath());
     myEmacsSettings.setEmacsPath(myEmacsPathSelector.getText());
     myDialyzerSettings.setCurrentPltPath(myPltPathSelector.getText());
-    myMapsHrlSettings.setHrlFiles(StringUtil.split(myMapsDefineHrlFiles.getText(), ";"));
     if (ErlangSystemUtil.isSmallIde()) {
       ErlangSdkForSmallIdes.setUpOrUpdateSdk(myProject, mySdkPathSelector.getText());
     }
@@ -170,7 +164,6 @@ public class ErlangExternalToolsConfigurable implements SearchableConfigurable, 
     myEmacsPathSelector.setText(myEmacsSettings.getEmacsPath());
     myPltPathSelector.setText(myDialyzerSettings.getCurrentPltPath());
     mySdkPathSelector.setText(StringUtil.notNullize(ErlangSdkType.getSdkPath(myProject)));
-    myMapsDefineHrlFiles.setText(myMapsHrlSettings.gerAllHrl());
     validateEmacsPath();
   }
 

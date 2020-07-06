@@ -56,8 +56,6 @@
         <projectService serviceImplementation="org.intellij.erlang.emacs.EmacsSettings"/>
         <!-- dialyzer -->
         <projectService serviceImplementation="org.intellij.erlang.dialyzer.DialyzerSettings"/>
-        <!-- hrl header -->
-        <projectService serviceImplementation="org.intellij.erlang.maps.MapsHrlSettings"/>
 
 <!--        <errorHandler implementation="com.intellij.diagnostic.ITNReporter"/>-->
         <lang.formatter language="Erlang" implementationClass="org.intellij.erlang.formatter.ErlangFormattingModelBuilder"/>
@@ -154,8 +152,6 @@
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangModuleIndex"/>
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangApplicationIndex"/>
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangAtomIndex"/>
-        <fileBasedIndex implementation="org.intellij.erlang.index.ErlangFileAtomIndex"/>
-        <fileBasedIndex implementation="org.intellij.erlang.index.ErlangTypeMapsFieldIndex"/>
 
         <stubIndex implementation="org.intellij.erlang.stubs.index.ErlangAllNameIndex"/>
         <stubIndex implementation="org.intellij.erlang.stubs.index.ErlangBehaviourModuleIndex"/>
