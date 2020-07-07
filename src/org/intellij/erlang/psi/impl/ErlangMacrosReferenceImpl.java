@@ -18,16 +18,16 @@ package org.intellij.erlang.psi.impl;
 
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.PsiReferenceBase;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.ArrayUtil;
 import com.intellij.util.IncorrectOperationException;
-import com.intellij.util.ObjectUtils;
 import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.psi.ErlangFile;
+import org.intellij.erlang.psi.ErlangMacros;
 import org.intellij.erlang.psi.ErlangMacrosDefinition;
 import org.intellij.erlang.psi.ErlangMacrosName;
-import org.intellij.erlang.psi.ErlangMacros;
 import org.jetbrains.annotations.NotNull;
 
 public class ErlangMacrosReferenceImpl extends PsiReferenceBase<PsiElement> {
@@ -41,7 +41,7 @@ public class ErlangMacrosReferenceImpl extends PsiReferenceBase<PsiElement> {
   }
 
   @Override
-  public PsiElement handleElementRename(String newElementName) throws IncorrectOperationException {
+  public PsiElement handleElementRename(@NotNull String newElementName) throws IncorrectOperationException {
     ErlangPsiImplUtil.setName(myNameElement, newElementName);
     return myElement;
   }
@@ -69,10 +69,11 @@ public class ErlangMacrosReferenceImpl extends PsiReferenceBase<PsiElement> {
   }
 
   @Override
-  public boolean isReferenceTo(PsiElement element) {
+  public boolean isReferenceTo(@NotNull PsiElement element) {
     if (!(myElement instanceof ErlangMacros)) return false;
-    ErlangMacrosDefinition definition = ObjectUtils.tryCast(element, ErlangMacrosDefinition.class);
-    String macroName = definition != null ? definition.getName() : null;
-    return macroName != null && macroName.equals(myReferenceName) && definition.getMacrosName() != myNameElement;
+    PsiReference reference = myElement.getReference();
+    PsiElement resolve = reference == null ? null : reference.resolve();
+    if (resolve != null && resolve.equals(element)) return true;
+    return false;
   }
 }
