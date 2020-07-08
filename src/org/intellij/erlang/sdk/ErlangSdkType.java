@@ -297,11 +297,15 @@ public class ErlangSdkType extends SdkType {
   private static void configureSdkPaths(@NotNull Sdk sdk) {
     SdkModificator sdkModificator = sdk.getSdkModificator();
     setupLocalSdkPaths(sdkModificator);
+    if (sdk.getHomeDirectory() != null)
+      sdkModificator.addRoot(sdk.getHomeDirectory(), JavadocOrderRootType.getInstance());
     String externalDocUrl = getDefaultDocumentationUrl(getRelease(sdk));
     VirtualFile fileByUrl = externalDocUrl == null ? null : VirtualFileManager.getInstance().findFileByUrl(externalDocUrl);
     if (fileByUrl != null) {
       sdkModificator.addRoot(fileByUrl, JavadocOrderRootType.getInstance());
     }
+
+
     sdkModificator.commitChanges();
   }
 

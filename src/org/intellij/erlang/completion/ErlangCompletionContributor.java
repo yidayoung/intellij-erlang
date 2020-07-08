@@ -23,6 +23,7 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.openapi.keymap.KeymapUtil;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtilCore;
 import com.intellij.openapi.project.Project;
@@ -269,7 +270,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
             }
           }
 
-          String shortcut = CompletionUtil.getActionShortcut(IdeActions.ACTION_CODE_COMPLETION);
+          String shortcut = KeymapUtil.getFirstKeyboardShortcutText(IdeActions.ACTION_CODE_COMPLETION);
           if (invocationCount == 1 && new Random().nextBoolean()) {
             result.addLookupAdvertisement("Press " + shortcut + " to activate atom completion from application scope");
           }

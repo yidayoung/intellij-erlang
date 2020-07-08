@@ -49,5 +49,11 @@ public class ErlangApplicationRunConfigurationType extends ConfigurationTypeBase
     public RunConfiguration createTemplateConfiguration(@NotNull Project project) {
       return new ErlangApplicationConfiguration(project, "Erlang", getInstance());
     }
+
+    @NotNull
+    @Override
+    public String getId() {
+      return "Erlang Factory";
+    }
   }
 }

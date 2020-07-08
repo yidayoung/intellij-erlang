@@ -25,19 +25,21 @@ import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.CharsetToolkit;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.ArrayUtil;
 import com.intellij.util.ResourceUtil;
+import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.net.HttpConfigurable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -180,9 +182,9 @@ abstract class ErlangSdkDocProviderBase implements ElementDocProvider {
       String[] docRootUrls = JavadocOrderRootType.getUrls(orderEntry);
       String sdkHttpDocRelPath = httpDocRelPath(virtualFile);
       List<String> httpUrls = PlatformDocumentationUtil.getHttpRoots(
-        docRootUrls, sdkHttpDocRelPath + inDocRef);
+        docRootUrls, sdkHttpDocRelPath);
       if (httpUrls != null) {
-        return httpUrls;
+        return ContainerUtil.map(httpUrls, url -> url += inDocRef);
       }
     }
     return Collections.emptyList();
@@ -191,20 +193,20 @@ abstract class ErlangSdkDocProviderBase implements ElementDocProvider {
   @NotNull
   private static List<String> getFileUrls(@NotNull List<OrderEntry> orderEntries,
                                           @NotNull VirtualFile virtualFile) {
-    List<String> fileUrls = null;
+    Set<String> fileUrls = null;
     for (OrderEntry orderEntry : orderEntries) {
       VirtualFile[] docRootFiles = orderEntry.getFiles(JavadocOrderRootType.getInstance());
       String sdkHttpDocRelPath = httpDocRelPath(virtualFile);
       for (VirtualFile docRootFile : docRootFiles) {
         if (docRootFile.isInLocalFileSystem()) {
           if (fileUrls == null) {
-            fileUrls = new ArrayList<>();
+            fileUrls = new HashSet<>();
           }
           fileUrls.add(docRootFile.getUrl() + "/" + sdkHttpDocRelPath);
         }
       }
     }
-    return fileUrls != null ? fileUrls : Collections.emptyList();
+    return fileUrls != null ? new ArrayList<>(fileUrls) : Collections.emptyList();
   }
 
   @Nullable
