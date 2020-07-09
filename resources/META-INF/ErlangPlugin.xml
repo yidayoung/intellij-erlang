@@ -248,7 +248,7 @@
         <localInspection language="Erlang" shortName="ErlangDuplicateBehaviour" displayName="Duplicate behaviour"
                          groupName="Erlang" enabledByDefault="true" level="WARNING"
                          implementationClass="org.intellij.erlang.inspection.ErlangDuplicateBehaviourInspection"/>
-        <localInspection language="Erlang" shortName="ErlangIoFormat" displayName="io:format"
+        <localInspection language="Erlang" shortName="ErlangIoFormat" displayName="Io:format"
                          groupName="Erlang" enabledByDefault="true" level="WARNING"
                          implementationClass="org.intellij.erlang.inspection.ErlangIoFormatInspection"/>
         <localInspection language="Erlang" shortName="ErlangUndefinedCallbackFunction" displayName="Undefined callback function"
@@ -285,6 +285,10 @@
         </intentionAction>
         <intentionAction>
           <className>org.intellij.erlang.intention.ErlangIntroduceValueIntention</className>
+          <category>Erlang</category>
+        </intentionAction>
+        <intentionAction>
+          <className>org.intellij.erlang.intention.ErlangGenerateDocIntention</className>
           <category>Erlang</category>
         </intentionAction>
 

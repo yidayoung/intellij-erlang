@@ -40,7 +40,6 @@ final class ErlangFunctionDocProvider implements ElementDocProvider {
     return null;
   }
 
-  @Nullable
   @Override
   public String getDocText() {
     ErlangFunction prevFunction = PsiTreeUtil.getPrevSiblingOfType(myErlangFunction, ErlangFunction.class);
@@ -56,7 +55,7 @@ final class ErlangFunctionDocProvider implements ElementDocProvider {
       commentText += "<b>Comment:</b><br/>" + ErlangDocUtil.getCommentsText(
         ErlangDocUtil.collectPrevComments(comment), "%%", ErlangDocUtil.EDOC_FUNCTION_TAGS);
     }
-    commentText += "<br/>" + myErlangFunction.getName() + myErlangFunction.getFirstClause().getArgumentDefinitionList().getText();
+    commentText += "<br/><b>Function Head:</b><br/>" + myErlangFunction.getName() + myErlangFunction.getFirstClause().getArgumentDefinitionList().getText();
     return ErlangDocUtil.wrapInPreTag(commentText);
   }
 }

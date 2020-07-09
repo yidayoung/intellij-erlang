@@ -73,6 +73,7 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
       ErlangFunType funType = PsiTreeUtil.findChildOfType(attr, ErlangFunType.class);
       Collection<ErlangType> types = PsiTreeUtil.findChildrenOfType(funType, ErlangType.class);
       for (ErlangType type : types) {
+        if (type instanceof ErlangTopType) continue;
         templateBuilder.replaceElement(type, type.getText());
       }
       templateBuilder.run(editor, false);
@@ -89,9 +90,10 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
   private static String computeArgsTypeSpecs(ErlangFunction function) {
     StringBuilder argTypes = new StringBuilder();
     int arity = function.getArity();
+    List<ErlangArgumentDefinition> argumentDefinitionList =
+      function.getFunctionClauseList().get(0).getArgumentDefinitionList().getArgumentDefinitionList();
     for (int i = 0; i < arity; i++) {
-      ErlangExpressionType argType = computeArgumentType(function, i);
-      argTypes.append(getTypeString(argType)).append(", ");
+      argTypes.append(getArgString(argumentDefinitionList.get(i), i));
     }
     if (arity != 0) {
       argTypes.setLength(argTypes.length() - 2);
@@ -99,11 +101,41 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
     return argTypes.toString();
   }
 
-  private static String getTypeString(ErlangExpressionType t) {
+  private static String getArgString(ErlangArgumentDefinition argumentDefinition, int index) {
+    ErlangExpression expression = argumentDefinition.getExpression();
+    ErlangExpressionType erlangExpressionType = ErlangExpressionType.create(expression);
+    String tail = getTypeString(erlangExpressionType).concat(", ");
+    String argName = getArgName(expression, index);
+    return argName + "::" + tail;
+  }
+
+  private static String getArgName(ErlangExpression expression) {
+    if (expression instanceof ErlangMaxExpression) return expression.getText();
+    if (expression instanceof ErlangAssignmentExpression){
+      ErlangExpression right = ((ErlangAssignmentExpression) expression).getRight();
+      return right != null ? right.getText() : "";
+    }
+    if (expression instanceof ErlangRecordExpression){
+      ErlangRecordRef recordRef = ((ErlangRecordExpression) expression).getRecordRef();
+      if (recordRef != null){
+        String text = recordRef.getText();
+        text = text.length() > 0 ? text.substring(0, 1).toUpperCase() + text.substring(1) : text;
+        return text;
+      }
+    }
+    return "";
+  }
+
+  public static String getArgName(ErlangExpression expression, int index){
+    String argName = getArgName(expression);
+    return argName.length() > 0 ? argName : String.format("X%d", index+1);
+  }
+
+  public static String getTypeString(ErlangExpressionType t) {
     return t == ErlangExpressionType.UNKNOWN ? "any()" : t.getName().toLowerCase() + "()";
   }
 
-  private static ErlangExpressionType computeReturnType(ErlangFunction function) {
+  public static ErlangExpressionType computeReturnType(ErlangFunction function) {
     List<ErlangFunctionClause> clauses = function.getFunctionClauseList();
     List<ErlangExpression> lastExpressions = new ArrayList<>(clauses.size());
     for (ErlangFunctionClause clause : clauses) {
@@ -114,23 +146,6 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
       }
     }
     return computeCommonType(lastExpressions);
-  }
-
-  private static ErlangExpressionType computeArgumentType(ErlangFunction function, int argumentIdx) {
-    List<ErlangExpression> argumentPatterns = getArgumentPatterns(function, argumentIdx);
-    return computeCommonType(argumentPatterns);
-  }
-
-  private static List<ErlangExpression> getArgumentPatterns(ErlangFunction function, int argumentIdx) {
-    List<ErlangFunctionClause> clauses = function.getFunctionClauseList();
-    List<ErlangExpression> argumentPatterns = new ArrayList<>(clauses.size());
-    for (ErlangFunctionClause clause : clauses) {
-      ErlangArgumentDefinitionList argDefList = clause.getArgumentDefinitionList();
-      List<ErlangArgumentDefinition> clauseArgs = argDefList.getArgumentDefinitionList();
-      ErlangArgumentDefinition argDef = argumentIdx < clauseArgs.size() ? clauseArgs.get(argumentIdx) : null;
-      ContainerUtil.addIfNotNull(argumentPatterns, argDef != null ? argDef.getExpression() : null);
-    }
-    return argumentPatterns;
   }
 
   private static ErlangExpressionType computeCommonType(List<ErlangExpression> expressions) {

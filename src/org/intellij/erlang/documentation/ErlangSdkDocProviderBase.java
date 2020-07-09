@@ -24,23 +24,25 @@ import com.intellij.openapi.roots.OrderEntry;
 import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.CharsetToolkit;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.util.ArrayUtil;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.util.ResourceUtil;
+import com.intellij.util.Url;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.net.HttpConfigurable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.builtInWebServer.BuiltInWebBrowserUrlProviderKt;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -175,15 +177,41 @@ abstract class ErlangSdkDocProviderBase implements ElementDocProvider {
   protected abstract boolean isDocBegin(@NotNull String line);
 
   @NotNull
-  private static List<String> getHttpUrls(@NotNull List<OrderEntry> orderEntries,
-                                          @NotNull VirtualFile virtualFile,
-                                          @NotNull String inDocRef) {
+  private List<String> getHttpUrls(@NotNull List<OrderEntry> orderEntries,
+                                   @NotNull VirtualFile virtualFile,
+                                   @NotNull String inDocRef){
+    String sdkHttpDocRelPath = httpDocRelPath(virtualFile);
+    String sdkDocPath = fileDocPath(virtualFile);
+    List<String> httpUrls = new ArrayList<>();
     for (OrderEntry orderEntry : orderEntries) {
       String[] docRootUrls = JavadocOrderRootType.getUrls(orderEntry);
-      String sdkHttpDocRelPath = httpDocRelPath(virtualFile);
-      List<String> httpUrls = PlatformDocumentationUtil.getHttpRoots(
-        docRootUrls, sdkHttpDocRelPath);
-      if (httpUrls != null) {
+      for ( String urlString : docRootUrls){
+        URL url;
+        try {
+          url = BrowserUtil.getURL(urlString);
+        }
+        catch (MalformedURLException e) {
+          continue;
+        }
+        if (url != null) {
+          if (url.getProtocol().equals("http")) {
+            VirtualFile vFile = VirtualFileManager.getInstance().findFileByUrl(urlString);
+            if (vFile != null) {
+              httpUrls.add(PlatformDocumentationUtil.getDocUrl(vFile, sdkHttpDocRelPath));
+            }
+          }
+          else if (url.getProtocol().equals("file")) {
+            VirtualFile vFile = LocalFileSystem.getInstance().findFileByPath(sdkDocPath);
+            if (vFile != null) {
+              List<Url> builtInServerUrls = BuiltInWebBrowserUrlProviderKt.getBuiltInServerUrls(vFile, myProject, null);
+              if (builtInServerUrls.size() > 0) {
+                ContainerUtil.addAllNotNull(httpUrls, ContainerUtil.map(builtInServerUrls, Url::toExternalForm));
+              }
+            }
+          }
+        }
+      }
+      if (httpUrls.size() > 0) {
         return ContainerUtil.map(httpUrls, url -> url += inDocRef);
       }
     }
@@ -238,6 +266,18 @@ abstract class ErlangSdkDocProviderBase implements ElementDocProvider {
       prefix = "lib/";
     }
     return prefix + appDirName + "/doc/html/" + virtualFile.getNameWithoutExtension() + ".html";
+  }
+
+  private static String fileDocPath(@NotNull VirtualFile virtualFile) {
+    VirtualFile parent = virtualFile.getParent();
+    while (parent != null && !parent.getName().equals("src")){
+      parent = parent.getParent();
+    }
+    if (parent != null){
+      VirtualFile libDir = parent.getParent();
+      return libDir.getPath() + "/doc/html/" + virtualFile.getNameWithoutExtension() + ".html";
+    }
+    return "";
   }
 
   @NotNull

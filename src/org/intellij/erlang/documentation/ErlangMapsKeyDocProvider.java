@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class ErlangMapsKeyDocProvider implements ElementDocProvider {
-  private PsiElement myPsiElement;
+  private final PsiElement myPsiElement;
 
   public ErlangMapsKeyDocProvider(PsiElement psiElement) {
     myPsiElement = psiElement;

@@ -49,4 +49,10 @@ final class ErlangConsoleRunConfigurationFactory extends ConfigurationFactory {
   public RunConfiguration createTemplateConfiguration(@NotNull Project project) {
     return new ErlangConsoleRunConfiguration("Erlang Shell", project);
   }
+
+  @NotNull
+  @Override
+  public String getId() {
+    return "Erlang Shell";
+  }
 }
