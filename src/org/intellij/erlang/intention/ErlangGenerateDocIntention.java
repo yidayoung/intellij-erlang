@@ -21,7 +21,10 @@ import com.intellij.codeInsight.template.TemplateManager;
 import com.intellij.codeInsight.template.impl.ConstantNode;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiComment;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.util.IncorrectOperationException;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.quickfixes.ErlangGenerateSpecFix;
@@ -41,7 +44,21 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     if (!(file instanceof ErlangFile)) return false;
     ErlangFunction function = findFunction(file, editor.getCaretModel().getOffset());
     if (function == null) return false;
-    return function.findSpecification() == null;
+    return findFunctionComment(function) == null;
+  }
+
+  @Nullable
+  private static PsiComment findFunctionComment(ErlangFunction function) {
+    if (function == null) return null;
+    for (PsiElement child = function.getPrevSibling(); child != null; child = child.getPrevSibling()) {
+      if (child instanceof PsiComment) {
+        return (PsiComment) child;
+      }
+      if (child instanceof ErlangAttribute) continue;
+      if (child instanceof PsiWhiteSpace) continue;
+      return null;
+    }
+    return null;
   }
 
   @Override
@@ -65,13 +82,12 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     template.setToReformat(true);
     template.addTextSegment("");
     template.addTextSegment("%%------------------------------------------------------------------------------\n");
-    template.addTextSegment("%% @spec ");
-    addSpec(template, function);
-    template.addTextSegment("\n%% @doc ");
-//    template.addVariable(new ConstantNode(""), true);
+    template.addTextSegment("%% @doc ");
     template.addEndVariable();
     template.addTextSegment("\n%% @end\n" +
                   "%%------------------------------------------------------------------------------\n");
+    if (function.findSpecification() == null)
+      addSpec(template, function);
     return template;
   }
 
@@ -79,6 +95,7 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     int arity = function.getArity();
     List<ErlangArgumentDefinition> argumentDefinitionList =
       function.getFunctionClauseList().get(0).getArgumentDefinitionList().getArgumentDefinitionList();
+    template.addTextSegment("-spec ");
     template.addTextSegment(function.getName()+"(");
     for (int i = 0; i < arity; i++) {
       ErlangExpression expression = argumentDefinitionList.get(i).getExpression();
@@ -92,6 +109,7 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     template.addTextSegment(") -> ");
     String typeString = ErlangGenerateSpecFix.getTypeString(ErlangGenerateSpecFix.computeReturnType(function));
     template.addVariable(new ConstantNode(typeString), true);
+    template.addTextSegment(".\n");
   }
 
   @Nullable
