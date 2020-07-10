@@ -119,11 +119,19 @@ public class ErlangPsiImplUtil {
   @Nullable
   public static PsiReference getReference(@NotNull ErlangQAtom o) { // todo: use multi reference
     PsiReference[] referencesFromProviders = ReferenceProvidersRegistry.getReferencesFromProviders(o);
-    PsiReference atomReference = standaloneAtom(o)?new ErlangQAtomReferenceImpl(o, o, TextRange.from(0, o.getTextLength())):null;
+    PsiReference atomReference = standaloneAtom(o) || inFunctionName(o)?new ErlangQAtomReferenceImpl(o, o, TextRange.from(0, o.getTextLength())):null;
     PsiReference[] psiReferences = atomReference == null ? referencesFromProviders : ArrayUtil.append(referencesFromProviders, atomReference);
+
     if (psiReferences.length == 0) return null;
     return new PsiMultiReference(psiReferences, o);
   }
+
+  public static boolean inFunctionName(PsiElement o) {
+    if(!(o.getParent() instanceof ErlangFunctionClause)) return false;
+    if (!(o.getParent().getParent() instanceof ErlangFunction)) return false;
+    return true;
+  }
+
 
 
   public static boolean standaloneAtom(@NotNull ErlangQAtom o) {
@@ -1252,14 +1260,14 @@ public class ErlangPsiImplUtil {
   @SuppressWarnings("UnusedParameters")
   public static boolean processDeclarations(@NotNull ErlangCaseExpression o, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
     List<ErlangCrClause> crClauseList = o.getCrClauseList();
-    boolean result = crClauseList.size() > 0;
+    if (crClauseList.size() == 0) return true;
+    boolean result = true;
     for (ErlangCrClause c : crClauseList) {
-      boolean shouldStop = false;
+      boolean shouldContinue = false;
       ErlangClauseBody clauseBody = c.getClauseBody();
-      if (clauseBody != null) shouldStop = processDeclarationRecursive(clauseBody, processor, state);
+      if (clauseBody != null) result &= processDeclarationRecursive(clauseBody, processor, state);
       ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
-      if (clauseArg != null) shouldStop &= processDeclarationRecursive(clauseArg, processor, state);
-      result &= shouldStop;
+      if (clauseArg != null) result &= processDeclarationRecursive(clauseArg, processor, state);
     }
     return result;
   }

@@ -50,7 +50,7 @@ public class ErlangVarProcessor implements PsiScopeProcessor {
       ContainerUtil.addIfNotNull(myVarList, variableContext.get(myRequestedName));
       return true;
     }
-
+    if (psiElement instanceof ErlangFile) return false;
     if (!(psiElement instanceof ErlangQVar)) return true;
     if (!psiElement.getText().equals(myRequestedName)) return true;
     if (psiElement.equals(myOrigin)) return true;

@@ -34,8 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.getConfigGetModule;
-import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.getMapsVarName;
+import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
 
 public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
 
@@ -77,6 +76,9 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
     String varName = getMapsVarName(myElement);
     if (varName != null) {
       return getResolve(project, varName);
+    }
+    if (ErlangPsiImplUtil.inFunctionName(myElement)){
+      return myElement.getParent().getParent();
     }
     return null;
   }
@@ -134,5 +136,13 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
       }
     }
     return null;
+  }
+
+  @Override
+  public boolean isReferenceTo(@NotNull PsiElement element) {
+    if (inFunctionName(myElement) && element instanceof ErlangFunction){
+      return !((ErlangFunction)element).getName().equals(myReferenceName);
+    }
+    return super.isReferenceTo(element);
   }
 }
