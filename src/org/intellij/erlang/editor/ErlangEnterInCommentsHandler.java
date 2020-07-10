@@ -47,12 +47,12 @@ public class ErlangEnterInCommentsHandler extends EnterHandlerDelegateAdapter {
 
     Document document = editor.getDocument();
     CharSequence text = document.getCharsSequence();
-    int caret = CharArrayUtil.shiftForward(text, caretOffset.get().intValue(), " \t");
+    int caret = CharArrayUtil.shiftForward(text, caretOffset.get().intValue() - 1, " \t");
     if (caret < text.length() && text.charAt(caret) == '\n') {
       return Result.Continue;
     }
 
-    PsiElement elementAtCaret = file.findElementAt(caret);
+    PsiElement elementAtCaret = file.findElementAt(caretOffset.get().intValue() - 1);
     ASTNode nodeAtCaret = elementAtCaret != null ? elementAtCaret.getNode() : null;
     IElementType type = nodeAtCaret != null ? nodeAtCaret.getElementType() : null;
     if (!ErlangParserDefinition.COMMENTS.contains(type) || ErlangParserDefinition.ERL_SHEBANG == type) {
@@ -67,9 +67,9 @@ public class ErlangEnterInCommentsHandler extends EnterHandlerDelegateAdapter {
     }
 
     int percentsToAppend = Math.min(3, percentsCount);
-    boolean appendSpace = text.charAt(caret) != ' ';
+    boolean appendSpace = commentText.charAt(percentsCount) == ' ';
     String newLinePrefix = StringUtil.repeat("%", percentsToAppend) + (appendSpace ? " " : "");
-    document.insertString(caret, newLinePrefix);
+    document.insertString(caretOffset.get().intValue(), newLinePrefix);
     caretAdvance.set(newLinePrefix.length());
 
     return Result.Default;

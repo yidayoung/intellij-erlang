@@ -26,6 +26,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.util.IncorrectOperationException;
+import org.intellij.erlang.ErlangParserDefinition;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.quickfixes.ErlangGenerateSpecFix;
 import org.intellij.erlang.types.ErlangExpressionType;
@@ -52,7 +53,9 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     if (function == null) return null;
     for (PsiElement child = function.getPrevSibling(); child != null; child = child.getPrevSibling()) {
       if (child instanceof PsiComment) {
-        return (PsiComment) child;
+        PsiComment comment = (PsiComment) child;
+        if (comment.getTokenType() == ErlangParserDefinition.ERL_FUNCTION_DOC_COMMENT) return comment;
+        return null;
       }
       if (child instanceof ErlangAttribute) continue;
       if (child instanceof PsiWhiteSpace) continue;
