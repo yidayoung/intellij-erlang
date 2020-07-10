@@ -53,7 +53,7 @@ public class ErlangApplicationRunConfigurationType extends ConfigurationTypeBase
     @NotNull
     @Override
     public String getId() {
-      return "Erlang Factory";
+      return "ErlangApplicationRunConfiguration";
     }
   }
 }
