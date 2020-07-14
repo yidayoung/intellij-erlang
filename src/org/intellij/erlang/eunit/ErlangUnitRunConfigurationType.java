@@ -49,5 +49,11 @@ public class ErlangUnitRunConfigurationType extends ConfigurationTypeBase {
     public RunConfiguration createTemplateConfiguration(@NotNull Project project) {
       return new ErlangUnitRunConfiguration(project, "Erlang", getInstance());
     }
+
+    @NotNull
+    @Override
+    public String getId() {
+      return "Erlang Eunit";
+    }
   }
 }

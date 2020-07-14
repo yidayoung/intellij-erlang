@@ -27,6 +27,7 @@ import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import com.twelvemonkeys.lang.StringUtil;
+import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,6 +42,7 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
   @Override
   public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
     if (!file.getManager().isInProject(file)) return false;
+    if (file.getFileType() != ErlangFileType.MODULE) return false;
     ErlangExpression expression = findExpression(file, editor.getCaretModel().getOffset());
     if (expression != null && file instanceof ErlangFile) {
       return true;
@@ -52,10 +54,14 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
   private static ErlangExpression findExpression(PsiFile file, int offset) {
     PsiElement element = file.findElementAt(offset);
     if (element == null) return null;
-    PsiElement prevSibling = element.getPrevSibling();
-    while (prevSibling != null && !(prevSibling instanceof PsiWhiteSpace)){
-      if (prevSibling instanceof ErlangExpression) return (ErlangExpression)prevSibling;
-      prevSibling = prevSibling.getPrevSibling();
+    PsiElement next = element.getPrevSibling();
+    while (next != null && !(next instanceof PsiWhiteSpace)){
+      if (next instanceof ErlangExpression) return (ErlangExpression)next;
+      next = next.getPrevSibling();
+    }
+    ErlangExpression expression = PsiTreeUtil.getParentOfType(element, ErlangExpression.class);
+    if (expression != null && expression.getTextOffset() == offset){
+      return expression;
     }
     return null;
   }

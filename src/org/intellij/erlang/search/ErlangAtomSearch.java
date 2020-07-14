@@ -54,20 +54,31 @@ public class ErlangAtomSearch extends QueryExecutorBase<PsiReference, References
   private static class MyCodeOccurenceProcessor implements TextOccurenceProcessor {
     private final PsiElement myElement;
     private final Processor<? super PsiReference> myPsiReferenceProcessor;
+    private final boolean myIsAloneAtom;
 
     public MyCodeOccurenceProcessor(@NotNull PsiElement element,
                                     @NotNull Processor<? super PsiReference> psiReferenceProcessor) {
       myElement = element;
       myPsiReferenceProcessor = psiReferenceProcessor;
+      if (element instanceof ErlangQAtom) {
+        myIsAloneAtom = ErlangPsiImplUtil.standaloneAtom((ErlangQAtom) element);
+      }
+      else myIsAloneAtom = false;
     }
 
     public boolean execute(@NotNull PsiElement element, int offsetInElement) {
-      if (element instanceof ErlangQAtom && element.getText().equals(myElement.getText()) && element.getReference() != null)
-        myPsiReferenceProcessor.process(element.getReference());
-//      PsiReference ref = element.getReference();
-//      if (ref != null && ref.isReferenceTo(myElement)) {
-//        return myPsiReferenceProcessor.process(ref);
-//      }
+
+      if (element instanceof ErlangQAtom && element.getText().equals(myElement.getText())){
+        PsiReference reference = element.getReference();
+        if (reference!=null){
+          if (myIsAloneAtom){
+            if (ErlangPsiImplUtil.standaloneAtom((ErlangQAtom) element))
+              return myPsiReferenceProcessor.process(reference);
+            return true;
+          }
+          if (reference.isReferenceTo(myElement)) return myPsiReferenceProcessor.process(reference);
+        }
+      }
       return true;
     }
   }

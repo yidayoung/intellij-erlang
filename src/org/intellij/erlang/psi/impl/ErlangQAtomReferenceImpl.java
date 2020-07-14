@@ -38,10 +38,13 @@ import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
 
 public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
 
+  private final boolean inFunctionName;
+
   public ErlangQAtomReferenceImpl(@NotNull PsiElement owner,
                                   ErlangQAtom qAtom,
                                   TextRange range) {
     super(owner, qAtom, range, ErlangPsiImplUtil.getNameIdentifier(qAtom).getText());
+    inFunctionName = inFunctionName(qAtom);
   }
 
   @Nullable
@@ -77,8 +80,9 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
     if (varName != null) {
       return getResolve(project, varName);
     }
-    if (ErlangPsiImplUtil.inFunctionName(myElement)){
-      return myElement.getParent().getParent();
+    if (inFunctionName){
+      PsiElement parent = myElement.getParent().getParent();
+      if (parent instanceof ErlangFunction) return parent;
     }
     return null;
   }
@@ -140,9 +144,9 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
 
   @Override
   public boolean isReferenceTo(@NotNull PsiElement element) {
-    if (inFunctionName(myElement) && element instanceof ErlangFunction){
+    if (inFunctionName && element instanceof ErlangFunction){
       return !((ErlangFunction)element).getName().equals(myReferenceName);
     }
-    return super.isReferenceTo(element);
+    return false;
   }
 }
