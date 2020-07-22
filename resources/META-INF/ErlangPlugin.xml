@@ -152,7 +152,6 @@
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangModuleIndex"/>
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangApplicationIndex"/>
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangAtomIndex"/>
-        <fileBasedIndex implementation="org.intellij.erlang.index.ErlangFileAtomIndex"/>
         <fileBasedIndex implementation="org.intellij.erlang.index.ErlangTypeMapsFieldIndex"/>
 
         <stubIndex implementation="org.intellij.erlang.stubs.index.ErlangAllNameIndex"/>

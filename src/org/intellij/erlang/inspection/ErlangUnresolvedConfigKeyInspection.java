@@ -20,11 +20,12 @@ import com.intellij.codeInspection.LocalInspectionToolSession;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiReference;
-import org.intellij.erlang.index.ErlangFileAtomIndex;
+import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.List;
 
 public class ErlangUnresolvedConfigKeyInspection extends ErlangInspectionBase {
@@ -58,9 +59,9 @@ public class ErlangUnresolvedConfigKeyInspection extends ErlangInspectionBase {
 
 
   private void checkConfigKey(@NotNull ProblemsHolder holder, ErlangFile config, ErlangQAtom atom) {
-    List<String> fileAtoms = ErlangFileAtomIndex.getFileAtoms(config, null);
-    if (fileAtoms.contains(atom.getText())) return;
-
+    Collection<PsiElement> configKeys = config.getConfigKeys();
+    List<String> keys = ContainerUtil.mapNotNull(configKeys, PsiElement::getText);
+    if (keys.contains(atom.getText())) return;
     registerProblem(holder, atom, "UnDefined Key: " + atom.getText() + " in config file " + config.getName());
   }
 

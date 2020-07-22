@@ -37,7 +37,7 @@ public class ErlangEnterInCommentsHandler extends EnterHandlerDelegateAdapter {
   @Override
   public Result preprocessEnter(@NotNull PsiFile file,
                                 @NotNull Editor editor,
-                                @NotNull Ref<Integer> caretOffset,
+                                @NotNull Ref<Integer> caretOffsetRef,
                                 @NotNull Ref<Integer> caretAdvance,
                                 @NotNull DataContext dataContext,
                                 EditorActionHandler originalHandler) {
@@ -47,31 +47,30 @@ public class ErlangEnterInCommentsHandler extends EnterHandlerDelegateAdapter {
 
     Document document = editor.getDocument();
     CharSequence text = document.getCharsSequence();
-    int caret = CharArrayUtil.shiftForward(text, caretOffset.get().intValue() - 1, " \t");
-    if (caret < text.length() && text.charAt(caret) == '\n') {
-      return Result.Continue;
-    }
 
-    PsiElement elementAtCaret = file.findElementAt(caretOffset.get().intValue() - 1);
+
+    int caretOffset = caretOffsetRef.get();
+    PsiElement elementAtCaret = file.findElementAt(caretOffset - 1);
     ASTNode nodeAtCaret = elementAtCaret != null ? elementAtCaret.getNode() : null;
     IElementType type = nodeAtCaret != null ? nodeAtCaret.getElementType() : null;
     if (!ErlangParserDefinition.COMMENTS.contains(type) || ErlangParserDefinition.ERL_SHEBANG == type) {
       return Result.Continue;
     }
+    PsiElement prevSibling = elementAtCaret.getPrevSibling();
+    if (!prevSibling.getText().contains("\n")) return Result.Continue;
 
     TextRange commentRange = elementAtCaret.getTextRange();
     CharSequence commentText = commentRange.subSequence(text);
     int percentsCount = CharArrayUtil.shiftForward(commentText, 0, "%");
-    if (commentRange.getStartOffset() + percentsCount > caret) {
-      return Result.Continue;
-    }
 
     int percentsToAppend = Math.min(3, percentsCount);
     boolean appendSpace = commentText.charAt(percentsCount) == ' ';
     String newLinePrefix = StringUtil.repeat("%", percentsToAppend) + (appendSpace ? " " : "");
-    document.insertString(caretOffset.get().intValue(), newLinePrefix);
+    document.insertString(caretOffset, newLinePrefix);
     caretAdvance.set(newLinePrefix.length());
 
     return Result.Default;
   }
+
+
 }

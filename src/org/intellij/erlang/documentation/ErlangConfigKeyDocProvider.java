@@ -52,8 +52,9 @@ public class ErlangConfigKeyDocProvider implements ElementDocProvider {
       ErlangTupleExpression configTuple = configSections.get(0);
       PsiComment comment = PsiTreeUtil.getPrevSiblingOfType(configTuple, PsiComment.class);
       if (comment != null) {
-        return configTuple.getText() + "<br>" + ErlangDocUtil.getCommentsText(
+        String result = configTuple.getText() + "\n" + ErlangDocUtil.getCommentsText(
           ErlangDocUtil.collectPrevComments(comment), "%%", ErlangDocUtil.EDOC_FUNCTION_TAGS);
+        return ErlangDocUtil.wrapInPreTag(result);
       }
     }
     return null;

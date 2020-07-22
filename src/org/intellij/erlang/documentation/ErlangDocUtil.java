@@ -89,4 +89,16 @@ public final class ErlangDocUtil {
     }
     return ContainerUtil.reverse(result);
   }
+  public static String getCommentText(PsiComment comment){
+    String text = comment.getText();
+    StringBuilder sb = new StringBuilder(text);
+    while (sb.length() > 0) {
+      if ('%' == sb.charAt(0) || ' ' == sb.charAt(0)){
+        sb.deleteCharAt(0);
+        continue;
+      }
+      break;
+    }
+    return sb.toString();
+  }
 }

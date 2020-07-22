@@ -74,6 +74,9 @@ public final class ElementDocProviderFactory {
         return new ErlangMapsKeyDocProvider(psiElement);
       }
     }
+    else if (psiElement instanceof ErlangRecordDefinition || psiElement instanceof ErlangTypedExpr){
+      return new ErlangRecordDocProvider(psiElement);
+    }
     else {
       ErlangGlobalFunctionCallExpression erlGlobalFunctionCall = PsiTreeUtil.getParentOfType(
         psiElement, ErlangGlobalFunctionCallExpression.class);

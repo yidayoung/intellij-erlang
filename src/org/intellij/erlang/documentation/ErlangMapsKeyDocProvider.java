@@ -48,10 +48,10 @@ public class ErlangMapsKeyDocProvider implements ElementDocProvider {
     }
     ErlangMapEntry entry = PsiTreeUtil.getParentOfType(myPsiElement, ErlangMapEntry.class);
     PsiComment comment = PsiTreeUtil.getNextSiblingOfType(entry, PsiComment.class);
-    String docString = StringUtil.convertLineSeparators(mapTuple.getText(), "<br>");
+    String docString = mapTuple.getText();
     if (comment != null){
-      docString = entry.getText() + "    " + comment.getText() + "<br><br>" + docString;
+      docString = entry.getText() + "    " + comment.getText() + "\n\n" + docString;
     }
-    return docString;
+    return ErlangDocUtil.wrapInPreTag(docString);
   }
 }

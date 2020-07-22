@@ -90,15 +90,11 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
   @Nullable
   private PsiElement getResolve(Project project, String mapsName) {
 
-    VirtualFile containFile = ErlangTypeMapsFieldIndex.getContainFile(project, mapsName);
-    if (containFile == null) {
+    ErlangFile erlangFile = ErlangTypeMapsFieldIndex.getContainFile(project, mapsName);
+    if (erlangFile == null) {
       return null;
     }
-    PsiFile psiFile = PsiManager.getInstance(project).findFile(containFile);
-    if (psiFile == null) {
-      return null;
-    }
-    List<ErlangMacrosDefinition> macroses = ((ErlangFile) psiFile).getMacroses();
+    List<ErlangMacrosDefinition> macroses = erlangFile.getMacroses();
     String mapsTypeMacroName = ErlangTypeMapsFieldIndex.getMapsVarType(mapsName);
     for (ErlangMacrosDefinition macro : macroses) {
       if (getMacroType(macro.getName()).equals(mapsTypeMacroName)) {

@@ -18,7 +18,6 @@ package org.intellij.erlang.intention;
 
 import com.intellij.codeInsight.template.Template;
 import com.intellij.codeInsight.template.TemplateManager;
-import com.intellij.codeInsight.template.impl.ConstantNode;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiElement;
@@ -26,13 +25,14 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
-import com.twelvemonkeys.lang.StringUtil;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.psi.*;
+import org.intellij.erlang.utils.ErlangVarUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+
 
 public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntention{
   protected ErlangIntroduceValueIntention() {
@@ -90,16 +90,16 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
     if (funName != null){
       if (funName.equals("get")){
         if (configKey!=null && configKey.length() > 1 && Character.isLowerCase(configKey.charAt(0))){
-          recommendVarNames.add(makeErlangVarName(configKey));
+          recommendVarNames.add(ErlangVarUtil.makeErlangVarName(configKey));
         }
         recommendVarNames.add("Val");
       }
       addCommonName(funName, recommendVarNames);
-      recommendVarNames.add(makeErlangVarName(funName));
+      recommendVarNames.add(ErlangVarUtil.makeErlangVarName(funName));
       recommendVarNames.add("Result");
     }
     int textOffset = expression.getTextOffset();
-    Template template = createVarDefinitionTemplate(project, recommendVarNames);
+    Template template = ErlangVarUtil.createVarDefinitionTemplate(project, recommendVarNames, true, "=");
     editor.getCaretModel().moveToOffset(textOffset);
     TemplateManager.getInstance(project).startTemplate(editor, template);
   }
@@ -107,36 +107,7 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
   private static void addCommonName(String name, ArrayList<String> recommendVarNames) {
     while (name.contains("_")){
       name = name.substring(name.indexOf("_")+1);
-      recommendVarNames.add(makeErlangVarName(name));
+      recommendVarNames.add(ErlangVarUtil.makeErlangVarName(name));
     }
-  }
-
-  private static String makeErlangVarName(String string) {
-    StringBuilder varName = new StringBuilder();
-    if (string.contains("_")){
-      String[] splits = string.split("_");
-      for (String s : splits){
-        String s1 = s.toLowerCase();
-        if (s1.length() > 1){
-          s1 = s1.substring(0, 1).toUpperCase().concat(s1.substring(1));
-        }
-        varName.append(s1);
-      }
-    }
-    else varName.append(string);
-    if (varName.length() > 1)
-      varName.replace(0, 1, StringUtil.toUpperCase(varName.substring(0,1)));
-    return varName.toString();
-  }
-
-  private static Template createVarDefinitionTemplate(Project project, ArrayList<String> varName) {
-    TemplateManager templateManager = TemplateManager.getInstance(project);
-    Template template = templateManager.createTemplate("", "");
-    template.setToReformat(true);
-    if (varName.isEmpty()) varName.add("V");
-    template.addVariable("var_name", new ConstantNode(varName.get(0)).withLookupStrings(varName), true);
-    template.addTextSegment(" = ");
-    template.addEndVariable();
-    return template;
   }
 }

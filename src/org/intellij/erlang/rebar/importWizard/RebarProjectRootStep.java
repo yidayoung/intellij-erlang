@@ -145,6 +145,7 @@ public class RebarProjectRootStep extends ProjectImportWizardStep {
           handler.startNotify();
           handler.waitFor();
           indicator.setText2("Refreshing");
+          projectRoot.refresh(false, true);
         } catch (ExecutionException e) {
           LOG.warn(e);
         }

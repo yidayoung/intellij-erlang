@@ -31,6 +31,7 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.CachedValue;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.*;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.MultiMap;
@@ -272,6 +273,22 @@ public class ErlangFileImpl extends PsiFileBase implements ErlangFile, PsiNameId
       @Override
       public Set<String> computeValue() {
         return unmodifiableSet(calcNoAutoImportSignatures());
+      }
+    });
+  private final CachedValue<Set<PsiElement>> myConfigKeys =
+    createCachedValue(new ValueProvider<Set<PsiElement>>() {
+      @NotNull
+      @Override
+      public Set<PsiElement> computeValue() {
+        return unmodifiableSet(calcConfigKeys());
+      }
+    });
+  private final CachedValue<Set<String>> myStandAloneAtoms =
+    createCachedValue(new ValueProvider<Set<String>>() {
+      @NotNull
+      @Override
+      public Set<String> computeValue() {
+        return unmodifiableSet(calcStandAloneAtoms());
       }
     });
 
@@ -561,6 +578,50 @@ public class ErlangFileImpl extends PsiFileBase implements ErlangFile, PsiNameId
   @Override
   public Collection<ErlangFunction> getExportedFunctions() {
     return myExportedFunctionValue.getValue();
+  }
+
+  private Set<PsiElement> calcConfigKeys() {
+    HashSet<PsiElement> keys = new HashSet<>();
+    if (getFileType() != ErlangFileType.TERMS)
+      return keys;
+    PsiElement child = getFirstChild();
+    while (child != null){
+      if (child instanceof ErlangTupleExpression) {
+        PsiElement key = ((ErlangTupleExpression) child).getExpressionList().get(0);
+        if (key instanceof ErlangConfigExpression && key.getFirstChild() instanceof ErlangQAtom) keys.add(key.getFirstChild());
+//        @todo support tuple key and string key int key etc.
+//        if (key instanceof ErlangTupleExpression) keys.add(key);
+//        if (key instanceof ErlangStringLiteral) keys.add(ErlangElementFactory.createQVarFromText(getProject(), key.getText()));
+      }
+      child = child.getNextSibling();
+    }
+    return keys;
+  }
+
+  @NotNull
+  @Override
+  public Collection<PsiElement> getConfigKeys() {
+    return myConfigKeys.getValue();
+  }
+
+  private Set<String> calcStandAloneAtoms() {
+    HashSet<String> erlangQAtoms = new HashSet<>();
+    if (getFileType() != ErlangFileType.MODULE) return erlangQAtoms;
+    accept(new ErlangRecursiveVisitor() {
+      @Override
+      public void visitQAtom(@NotNull ErlangQAtom o) {
+        if (ErlangPsiImplUtil.standaloneAtom(o) && o.getAtom() != null){
+          erlangQAtoms.add(o.getText());
+        }
+      }
+    });
+    return erlangQAtoms;
+  }
+
+  @NotNull
+  @Override
+  public Collection<String> getStandAloneAtoms() {
+    return myStandAloneAtoms.getValue();
   }
 
   private Set<ErlangFunction> calcExportedFunctions() {

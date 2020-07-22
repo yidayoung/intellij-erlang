@@ -177,8 +177,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
   @NotNull
   private ArrayList<ImportedOtpApp> getDepsImportedOtpApps(@NotNull ProgressIndicator indicator,
                                                                @NotNull VirtualFile projectRoot) {
-    String depsDir = getDepsDir(projectRoot);
-    VirtualFile depsRoot = LocalFileSystem.getInstance().findFileByPath(depsDir);
+    VirtualFile depsRoot = getDepsDir(projectRoot);
     assert myProjectRoot != null;
     final ArrayList<ImportedOtpApp> importedOtpApps = new ArrayList<>();
     if (depsRoot == null){
@@ -192,7 +191,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
         if (file.isDirectory()) {
           indicator.setText2(file.getPath());
           if (isExamplesDirectory(file) || isRelDirectory(projectRoot.getPath(), file.getPath())) return false;
-          if (rootApp.getApps().contains(file.getName())) {
+          if (rootApp.isRebar3() && rootApp.getApps().contains(file.getName())) {
             return false;
           }
         }
@@ -204,20 +203,10 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     return importedOtpApps;
   }
 
-  @NotNull
-  private static String getDepsDir(@NotNull VirtualFile projectRoot) {
-    VirtualFile buildDir = projectRoot.findChild("_build");
-    String depsDir = "";
-    if (buildDir != null) {
-      depsDir = buildDir.getPath() + File.separator + "default" + File.separator + "lib";
-    }
-    else {
-      VirtualFile DepsFile = projectRoot.findChild("deps");
-      if (null != DepsFile) {
-        depsDir = DepsFile.getPath();
-      }
-    }
-    return depsDir;
+  @Nullable
+  private static VirtualFile getDepsDir(@NotNull VirtualFile projectRoot) {
+    VirtualFile deps = projectRoot.findFileByRelativePath("_build/default/lib");
+    return deps != null ? deps : projectRoot.findChild("deps");
   }
 
   private static boolean isRelDirectory(String projectRootPath, String path) {

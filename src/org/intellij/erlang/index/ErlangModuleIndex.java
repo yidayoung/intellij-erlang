@@ -70,7 +70,7 @@ public class ErlangModuleIndex extends ScalarIndexExtension<String> {
   @NotNull
   @Override
   public FileBasedIndex.InputFilter getInputFilter() {
-    return ErlangIndexUtil.ERLANG_MODULE_FILTER;
+    return ErlangIndexUtil.ERLANG_ALL_FILTER;
   }
 
   @Override

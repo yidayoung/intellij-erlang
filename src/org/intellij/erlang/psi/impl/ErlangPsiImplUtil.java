@@ -512,13 +512,14 @@ public class ErlangPsiImplUtil {
 
   @Nullable
   private static ErlangMapExpression getAtomMapExpression(PsiElement psiElement){
-    if (!(psiElement.getParent() instanceof ErlangAtom||psiElement instanceof ErlangQAtom)){
+    PsiElement parent = psiElement.getParent();
+    if (!(parent instanceof ErlangAtom|| parent instanceof ErlangMapTuple || psiElement instanceof ErlangQAtom)){
       return null;
     }
     ErlangMapTuple tuple = PsiTreeUtil.getParentOfType(psiElement, ErlangMapTuple.class, true,
                                                        ErlangFunctionCallExpression.class, ErlangFunClause.class, ErlangMapExpression.class);
-    PsiElement parent = tuple != null ? tuple.getParent() : null;
-    return parent instanceof ErlangMapExpression ? (ErlangMapExpression)parent:null;
+    PsiElement result = tuple != null ? tuple.getParent() : null;
+    return result instanceof ErlangMapExpression ? (ErlangMapExpression)result:null;
   }
 
   @Nullable
@@ -538,6 +539,7 @@ public class ErlangPsiImplUtil {
         return expression.getText();
       }
     }
+
     return null;
   }
 
@@ -1259,11 +1261,12 @@ public class ErlangPsiImplUtil {
 
   @SuppressWarnings("UnusedParameters")
   public static boolean processDeclarations(@NotNull ErlangCaseExpression o, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    ErlangExpression expression = o.getExpression();
+    if (expression != null && processDeclarationRecursive(expression, processor, state)) return true;
     List<ErlangCrClause> crClauseList = o.getCrClauseList();
     if (crClauseList.size() == 0) return true;
     boolean result = true;
     for (ErlangCrClause c : crClauseList) {
-      boolean shouldContinue = false;
       ErlangClauseBody clauseBody = c.getClauseBody();
       if (clauseBody != null) result &= processDeclarationRecursive(clauseBody, processor, state);
       ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();

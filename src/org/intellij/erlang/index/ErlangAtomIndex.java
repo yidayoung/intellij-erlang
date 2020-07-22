@@ -31,6 +31,7 @@ import org.intellij.erlang.psi.ErlangQAtom;
 import org.intellij.erlang.psi.ErlangRecursiveVisitor;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -80,7 +81,7 @@ public class ErlangAtomIndex extends ScalarIndexExtension<String> {
   @NotNull
   @Override
   public FileBasedIndex.InputFilter getInputFilter() {
-    return ErlangIndexUtil.ERLANG_MODULE_FILTER;
+    return ErlangIndexUtil.ERLANG_ALL_FILTER;
   }
 
   @Override
@@ -94,9 +95,13 @@ public class ErlangAtomIndex extends ScalarIndexExtension<String> {
   }
 
   @NotNull
-  public static Collection<String> getNames(@NotNull Project project, @NotNull GlobalSearchScope searchScope) {
+  public static Collection<String> getNames(@NotNull Project project,
+                                            @NotNull GlobalSearchScope searchScope,
+                                            @Nullable String atomName) {
     CommonProcessors.CollectUniquesProcessor<String> processor = new CommonProcessors.CollectUniquesProcessor<>();
     FileBasedIndex.getInstance().processAllKeys(ERLANG_ATOM_INDEX, processor, searchScope, IdFilter.getProjectIdFilter(project, false));
-    return processor.getResults();
+    Collection<String> allKeys = processor.getResults();
+    allKeys.remove(atomName);
+    return allKeys;
   }
 }

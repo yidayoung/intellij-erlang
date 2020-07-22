@@ -67,10 +67,12 @@ public class ErlangClausesSmartEnterProcessor extends SmartEnterProcessor {
 
   private static boolean processCrClause(@NotNull Project project, @NotNull Editor editor) {
     TemplateManager templateManager = TemplateManager.getInstance(project);
-    Template template = templateManager.createTemplate("", "", "\n$variable$ ->$END$");
+    Template template = templateManager.createTemplate("", "", "\n$variable$ ->$exp$$END$");
+    template.setToReformat(true);
     Expression var = new MyTextExpressionNode("_");
     template.addVariable("variable", var, var, true);
-
+    var = new MyTextExpressionNode("ok");
+    template.addVariable("exp", var, var, true);
     editor.getScrollingModel().scrollToCaret(ScrollType.RELATIVE);
     templateManager.startTemplate(editor, template);
     return true;
