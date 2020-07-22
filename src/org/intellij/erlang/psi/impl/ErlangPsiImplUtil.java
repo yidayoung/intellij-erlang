@@ -502,44 +502,14 @@ public class ErlangPsiImplUtil {
     }
     if (globalCallExpression == null) return  null;
     ErlangFunctionCallExpression callExpression = globalCallExpression.getFunctionCallExpression();
+    ErlangExpression firstArgExpression = callExpression.getArgumentList().getExpressionList().get(0);
+    // must be first arg
+    if (!PsiTreeUtil.isAncestor(firstArgExpression, psiElement, true)) return null;
     ErlangAtom funAtom = callExpression.getQAtom().getAtom();
     ErlangAtom moduleAtom = globalCallExpression.getModuleRef().getQAtom().getAtom();
     if (moduleAtom != null && funAtom != null && funAtom.getName().equals("get")) {
       return moduleAtom.getName();
     }
-    return null;
-  }
-
-  @Nullable
-  private static ErlangMapExpression getAtomMapExpression(PsiElement psiElement){
-    PsiElement parent = psiElement.getParent();
-    if (!(parent instanceof ErlangAtom|| parent instanceof ErlangMapTuple || psiElement instanceof ErlangQAtom)){
-      return null;
-    }
-    ErlangMapTuple tuple = PsiTreeUtil.getParentOfType(psiElement, ErlangMapTuple.class, true,
-                                                       ErlangFunctionCallExpression.class, ErlangFunClause.class, ErlangMapExpression.class);
-    PsiElement result = tuple != null ? tuple.getParent() : null;
-    return result instanceof ErlangMapExpression ? (ErlangMapExpression)result:null;
-  }
-
-  @Nullable
-  public static String getMapsVarName(PsiElement psiElement){
-    ErlangMapExpression atomMapExpression = getAtomMapExpression(psiElement);
-    if (atomMapExpression != null) {
-      // Box#{b....}
-      ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression, ErlangMaxExpression.class);
-      if (expression != null) {
-        return expression.getText();
-      }
-      else {
-        // #{b....} = Box
-        expression = PsiTreeUtil.getChildOfType(atomMapExpression.getParent(), ErlangMaxExpression.class);
-      }
-      if (expression != null) {
-        return expression.getText();
-      }
-    }
-
     return null;
   }
 
@@ -1261,16 +1231,16 @@ public class ErlangPsiImplUtil {
 
   @SuppressWarnings("UnusedParameters")
   public static boolean processDeclarations(@NotNull ErlangCaseExpression o, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    boolean result = true;
     ErlangExpression expression = o.getExpression();
-    if (expression != null && processDeclarationRecursive(expression, processor, state)) return true;
+    if (expression != null) result = processDeclarationRecursive(expression, processor, state);
     List<ErlangCrClause> crClauseList = o.getCrClauseList();
     if (crClauseList.size() == 0) return true;
-    boolean result = true;
     for (ErlangCrClause c : crClauseList) {
       ErlangClauseBody clauseBody = c.getClauseBody();
-      if (clauseBody != null) result &= processDeclarationRecursive(clauseBody, processor, state);
+      if (clauseBody != null) result |= processDeclarationRecursive(clauseBody, processor, state);
       ErlangArgumentDefinition clauseArg = c.getArgumentDefinition();
-      if (clauseArg != null) result &= processDeclarationRecursive(clauseArg, processor, state);
+      if (clauseArg != null) result |= processDeclarationRecursive(clauseArg, processor, state);
     }
     return result;
   }

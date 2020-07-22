@@ -96,6 +96,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
   @Nullable
   private String myAtomName;
   private boolean myMapsFieldWithArrow;
+  private String myMapsFieldArrow;
 
   @Override
   public void beforeCompletion(@NotNull CompletionInitializationContext context) {
@@ -136,6 +137,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
     myMapsVarName = null;
     myAtomName = null;
     myMapsFieldWithArrow = false;
+    myMapsFieldArrow = "";
   }
 
   private void refreshMapsInfo(PsiElement elementAt) {
@@ -154,8 +156,19 @@ public class ErlangCompletionContributor extends CompletionContributor {
       myMapsFieldWithArrow = false;
     }
     else {
-      myMapsVarName = getMapsVarName(elementAt);
-      myMapsFieldWithArrow = true;
+      ErlangMapExpression atomMapExpression = ErlangVarUtil.getAtomMapExpression(elementAt);
+      if (atomMapExpression != null) {
+        myMapsFieldWithArrow = true;
+        myMapsVarName = ErlangVarUtil.getMapsVarNameBefore(atomMapExpression);
+        if (myMapsVarName != null) {
+          myMapsFieldArrow = "=>";
+          return;
+        }
+        myMapsVarName = ErlangVarUtil.getMapsVarNameAfter(atomMapExpression);
+        if (myMapsVarName != null) {
+          myMapsFieldArrow = ":=";
+        }
+      }
     }
   }
 
@@ -201,7 +214,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
           result.addAllElements(getTypeLookupElements(file, true, false));
         }
 
-        if (originalParent instanceof ErlangRecordExpression || prevIsRadix(originalPosition) || prevIsRadix(grandPa)) {
+        if (!isDot(originalPosition) && (originalParent instanceof ErlangRecordExpression || prevIsRadix(originalPosition) || prevIsRadix(grandPa))) {
           result.addAllElements(getRecordLookupElements(file));
           if (ErlangParserUtil.isConsole(file)){
             Project project = file.getProject();
@@ -359,12 +372,10 @@ public class ErlangCompletionContributor extends CompletionContributor {
               String fieldName = firstChild.getText();
               result.addElement(PrioritizedLookupElement.withPriority(
                 LookupElementBuilder.create(
-                  fieldName).withInsertHandler(!myMapsFieldWithArrow ? null : (context, item) -> {
-                  context.commitDocument();
-                  Editor editor = context.getEditor();
-                  Template template = ErlangVarUtil.createVarDefinitionTemplate(file.getProject(), fieldName, false, "=>");
-                  TemplateManager.getInstance(file.getProject()).startTemplate(editor, template);
-                }).withPsiElement(firstChild).withIcon(ErlangIcons.FIELD), FIELD_PRIORITY));
+                  fieldName).withInsertHandler(
+                    !myMapsFieldWithArrow ? null :
+                    new ErlangVarUtil.ErlangFieldInsertHandle(file.getProject(), fieldName, false, myMapsFieldArrow))
+                                    .withPsiElement(firstChild).withIcon(ErlangIcons.FIELD), FIELD_PRIORITY));
             }
           }
           return;
@@ -394,13 +405,11 @@ public class ErlangCompletionContributor extends CompletionContributor {
   private static LookupElement createFieldLookupElement(@NotNull Project project, @NotNull PsiElement element, String name, boolean withoutEq) {
     return PrioritizedLookupElement.withPriority(LookupElementBuilder.create(name)
                                .withIcon(ErlangIcons.FIELD).withPsiElement(element)
-                               .withInsertHandler(withoutEq ? null : equalsInsertHandler(project)), FIELD_PRIORITY);
+                               .withInsertHandler(
+                                 withoutEq ? null :
+                                 new ErlangVarUtil.ErlangFieldInsertHandle(project, name, false, "=")), FIELD_PRIORITY);
   }
 
-  @NotNull
-  private static SingleCharInsertHandler equalsInsertHandler(@NotNull Project project) {
-    return new SingleCharInsertHandler('=', CodeStyle.getSettings(project).getCustomSettings(ErlangCodeStyleSettings.class).SPACE_AROUND_EQ_IN_RECORDS);
-  }
 
   @NotNull
   private static List<LookupElement> getLibPathLookupElements(@NotNull PsiFile file, @NotNull final String includeText) {

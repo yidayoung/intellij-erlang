@@ -29,6 +29,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import org.intellij.erlang.index.ErlangTypeMapsFieldIndex;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.rebar.util.ErlangTermFileUtil;
+import org.intellij.erlang.utils.ErlangVarUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,7 +77,7 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
         }
       }
     }
-    String varName = getMapsVarName(myElement);
+    String varName = ErlangVarUtil.getMapsVarName(myElement);
     if (varName != null) {
       return getResolve(project, varName);
     }

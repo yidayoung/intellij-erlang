@@ -16,11 +16,20 @@
 
 package org.intellij.erlang.utils;
 
+import com.intellij.codeInsight.completion.BasicInsertHandler;
+import com.intellij.codeInsight.completion.InsertionContext;
+import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.template.Template;
 import com.intellij.codeInsight.template.TemplateManager;
 import com.intellij.codeInsight.template.impl.ConstantNode;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.twelvemonkeys.lang.StringUtil;
+import org.intellij.erlang.psi.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 
@@ -46,11 +55,6 @@ public class ErlangVarUtil {
       varName = new StringBuilder(StringUtil.capitalize(varName.toString()));
     return varName.toString();
   }
-  public static Template createVarDefinitionTemplate(Project project, String varName, boolean varBefore, String equalString){
-    ArrayList<String> recommendVarNames = new ArrayList<>();
-    recommendVarNames.add(makeErlangVarName(varName));
-    return createVarDefinitionTemplate(project, recommendVarNames, varBefore, equalString);
-  }
 
   public static Template createVarDefinitionTemplate(Project project, ArrayList<String> varName, boolean varBefore, String equalString) {
     TemplateManager templateManager = TemplateManager.getInstance(project);
@@ -69,4 +73,61 @@ public class ErlangVarUtil {
     return template;
   }
 
+  @Nullable
+  public static String getMapsVarName(PsiElement psiElement){
+    ErlangMapExpression atomMapExpression = getAtomMapExpression(psiElement);
+    if (atomMapExpression != null) {
+      // Box#{b....}
+      String mapsVarNameBefore = getMapsVarNameBefore(atomMapExpression);
+      return mapsVarNameBefore != null? mapsVarNameBefore:getMapsVarNameAfter(atomMapExpression);
+    }
+    return null;
+  }
+
+  @Nullable
+  public static String getMapsVarNameBefore(ErlangMapExpression atomMapExpression){
+    ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression, ErlangMaxExpression.class);
+    return expression != null ? expression.getText(): null;
+  }
+
+  @Nullable
+  public static String getMapsVarNameAfter(ErlangMapExpression atomMapExpression){
+    ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression.getParent(), ErlangMaxExpression.class);
+    return expression != null ? expression.getText(): null;
+  }
+
+  @Nullable
+  public static ErlangMapExpression getAtomMapExpression(PsiElement psiElement){
+    PsiElement parent = psiElement.getParent();
+    if (!(parent instanceof ErlangAtom || parent instanceof ErlangMapTuple || psiElement instanceof ErlangQAtom)){
+      return null;
+    }
+    ErlangMapTuple tuple = PsiTreeUtil.getParentOfType(psiElement, ErlangMapTuple.class, true,
+                                                       ErlangFunctionCallExpression.class, ErlangFunClause.class, ErlangMapExpression.class);
+    PsiElement result = tuple != null ? tuple.getParent() : null;
+    return result instanceof ErlangMapExpression ? (ErlangMapExpression)result:null;
+  }
+  public static class ErlangFieldInsertHandle extends BasicInsertHandler<LookupElement>{
+    private final Project myProject;
+    private final ArrayList<String> myVarName;
+    private final boolean myVarBefore;
+    private final String myEqualString;
+
+    public ErlangFieldInsertHandle(Project project, String varName, boolean varBefore, String equalString) {
+      myProject = project;
+      myVarName = new ArrayList<>();
+      myVarName.add(makeErlangVarName(varName));
+      myVarBefore = varBefore;
+      myEqualString = equalString;
+    }
+
+    @Override
+    public void handleInsert(@NotNull InsertionContext context, @NotNull LookupElement item) {
+      super.handleInsert(context, item);
+      Editor editor = context.getEditor();
+      Template template = createVarDefinitionTemplate(myProject, myVarName, myVarBefore, myEqualString);
+      TemplateManager.getInstance(myProject).startTemplate(editor, template);
+    }
+  }
 }
+
