@@ -19,20 +19,20 @@ package org.intellij.erlang.psi.impl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.index.ErlangTypeMapsFieldIndex;
 import org.intellij.erlang.psi.*;
-import org.intellij.erlang.rebar.util.ErlangTermFileUtil;
+import org.intellij.erlang.utils.ErlangTermFileUtil;
 import org.intellij.erlang.utils.ErlangVarUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 
 import static org.intellij.erlang.psi.impl.ErlangPsiImplUtil.*;
@@ -55,26 +55,11 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
     Project project = myElement.getProject();
     if (configModule != null) {
       if (configModule.equals("maps")) {
-        ErlangArgumentList argumentList = PsiTreeUtil.getParentOfType(myElement, ErlangArgumentList.class);
-        if (argumentList == null) {
-          return null;
-        }
-        List<ErlangExpression> expressionList = argumentList.getExpressionList();
-        if (expressionList.size() >= 2) {
-          String varName = expressionList.get(1).getText();
-          return getResolve(project, varName);
-        }
-
+        return getMapsResolve();
       }
       else {
-        PsiFile[] configFiles = FilenameIndex.getFilesByName(project, configModule + ".config", GlobalSearchScope.allScope(project));
-        if (configFiles.length == 0) configFiles = FilenameIndex.getFilesByName(project, configModule.replace("data_", "") + ".config", GlobalSearchScope.allScope(project));
-        if (configFiles.length > 0) {
-          PsiFile configFile = configFiles[0];
-          List<ErlangTupleExpression> configSections = ErlangTermFileUtil.getConfigSections(configFile, myElement.getText());
-          if (configSections.size() > 0)
-            return getQAtom(configSections.get(0));
-        }
+        PsiElement key = getConfigKeyResolve(configModule, project);
+        if (key != null) return key;
       }
     }
     String varName = ErlangVarUtil.getMapsVarName(myElement);
@@ -86,6 +71,49 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
       if (parent instanceof ErlangFunction) return parent;
     }
     return null;
+  }
+
+  @Nullable
+  private PsiElement getMapsResolve() {
+    ErlangArgumentList argumentList = PsiTreeUtil.getParentOfType(myElement, ErlangArgumentList.class);
+    if (argumentList == null) {
+      return null;
+    }
+    List<ErlangExpression> expressionList = argumentList.getExpressionList();
+    if (expressionList.size() >= 2) {
+      String varName = expressionList.get(1).getText();
+          return getResolve(myElement.getProject(), varName);
+    }
+    return null;
+  }
+
+  @Nullable
+  private PsiElement getConfigKeyResolve(String configModule, Project project) {
+    PsiFile[] configFiles = FilenameIndex.getFilesByName(project, configModule + ".config", GlobalSearchScope.allScope(project));
+    if (configFiles.length == 0) configFiles = FilenameIndex.getFilesByName(project, configModule.replace("data_", "") + ".config", GlobalSearchScope.allScope(project));
+    if (configFiles.length == 0) return null;
+    PsiFile configFile = configFiles[0];
+    List<ErlangTupleExpression> configSections = ErlangTermFileUtil.getConfigSections(configFile, myElement.getText());
+    if (configSections.size() > 0) return getQAtom(configSections.get(0));
+    ErlangTupleExpression tupleExpression = PsiTreeUtil.getParentOfType(myElement, ErlangTupleExpression.class, true, ErlangArgumentDefinition.class);
+    if (tupleExpression == null || !(configFile instanceof ErlangFile)) {
+      return configFile.getFirstChild();
+    }
+    Collection<PsiElement> configKeys = ((ErlangFile) configFile).getConfigKeys();
+    if (PsiTreeUtil.getChildOfType(tupleExpression, ErlangQVar.class) == null) {
+      // if key dos't contain var, try search same tuple
+      String tupleKeyText = tupleExpression.getText();
+      PsiElement directSameResolve = ContainerUtil.find(configKeys, key -> StringUtil.equalsIgnoreWhitespaces(key.getText(), tupleKeyText));
+      if (null != directSameResolve) return directSameResolve;
+    }
+    String tupleName = ErlangTermFileUtil.getTupleKeyName(tupleExpression);
+    for (PsiElement key : configKeys) {
+      if (key instanceof ErlangTupleExpression) {
+        if (StringUtil.equalsIgnoreWhitespaces(tupleName, ErlangTermFileUtil.getTupleKeyName(key)))
+          return key;
+      }
+    }
+    return configFile.getFirstChild();
   }
 
   @Nullable

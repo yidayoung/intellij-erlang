@@ -54,7 +54,7 @@ import org.intellij.erlang.psi.ErlangListExpression;
 import org.intellij.erlang.psi.ErlangTupleExpression;
 import org.intellij.erlang.psi.impl.ErlangElementFactory;
 import org.intellij.erlang.rebar.settings.RebarSettings;
-import org.intellij.erlang.rebar.util.ErlangTermFileUtil;
+import org.intellij.erlang.utils.ErlangTermFileUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;

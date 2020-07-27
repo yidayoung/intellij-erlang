@@ -16,15 +16,11 @@
 
 package org.intellij.erlang.completion;
 
-import com.intellij.application.options.CodeStyle;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.codeInsight.template.Template;
-import com.intellij.codeInsight.template.TemplateManager;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.actionSystem.IdeActions;
-import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.keymap.KeymapUtil;
 import com.intellij.openapi.module.Module;
@@ -54,7 +50,6 @@ import com.intellij.util.containers.JBIterable;
 import org.intellij.erlang.ErlangFileType;
 import org.intellij.erlang.ErlangTypes;
 import org.intellij.erlang.console.ErlangConsoleView;
-import org.intellij.erlang.formatter.settings.ErlangCodeStyleSettings;
 import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.index.ErlangApplicationIndex;
 import org.intellij.erlang.index.ErlangAtomIndex;
@@ -63,6 +58,7 @@ import org.intellij.erlang.index.ErlangTypeMapsFieldIndex;
 import org.intellij.erlang.parser.ErlangParserUtil;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
+import org.intellij.erlang.utils.ErlangTermFileUtil;
 import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.intellij.erlang.roots.ErlangIncludeDirectoryUtil;
 import org.intellij.erlang.sdk.ErlangSystemUtil;
@@ -214,7 +210,8 @@ public class ErlangCompletionContributor extends CompletionContributor {
           result.addAllElements(getTypeLookupElements(file, true, false));
         }
 
-        if (!isDot(originalPosition) && (originalParent instanceof ErlangRecordExpression || prevIsRadix(originalPosition) || prevIsRadix(grandPa))) {
+        if ((originalParent != null && !isDot(originalPosition))
+            && (originalParent instanceof ErlangRecordExpression || prevIsRadix(originalPosition) || prevIsRadix(grandPa))) {
           result.addAllElements(getRecordLookupElements(file));
           if (ErlangParserUtil.isConsole(file)){
             Project project = file.getProject();
@@ -285,7 +282,7 @@ public class ErlangCompletionContributor extends CompletionContributor {
           int invocationCount = parameters.getInvocationCount();
           boolean moduleScope = invocationCount > 0 && invocationCount % 2 == 0;
           boolean moduleWithDeps = invocationCount > 0 && invocationCount % 3 == 0;
-          
+
           if (moduleScope || moduleWithDeps) {
             Project project = file.getProject();
 
@@ -393,10 +390,11 @@ public class ErlangCompletionContributor extends CompletionContributor {
     if (config instanceof ErlangFile && config.getFileType() == ErlangFileType.TERMS){
       Collection<PsiElement> configKeys = ((ErlangFile) config).getConfigKeys();
       for (PsiElement key : configKeys){
-        if (key instanceof ErlangQAtom) {
-          result.addElement(PrioritizedLookupElement.withPriority(
-            LookupElementBuilder.create(key.getText()).withPsiElement(key).withIcon(ErlangIcons.FIELD), FIELD_PRIORITY));
-        }
+        ErlangTermFileUtil.KeyInsertHandle insertHandle = new ErlangTermFileUtil.KeyInsertHandle(key);
+        result.addElement(PrioritizedLookupElement.withPriority(
+            LookupElementBuilder.create(insertHandle.getName())
+                                .withInsertHandler(insertHandle)
+                                .withPsiElement(key).withIcon(ErlangIcons.FIELD), FIELD_PRIORITY));
       }
     }
   }

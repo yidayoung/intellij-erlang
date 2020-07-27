@@ -25,7 +25,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.ContainerUtil;
 import org.intellij.erlang.psi.*;
-import org.intellij.erlang.rebar.util.ErlangTermFileUtil;
+import org.intellij.erlang.utils.ErlangTermFileUtil;
 import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

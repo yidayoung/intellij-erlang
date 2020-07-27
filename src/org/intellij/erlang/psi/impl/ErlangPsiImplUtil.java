@@ -502,9 +502,9 @@ public class ErlangPsiImplUtil {
     }
     if (globalCallExpression == null) return  null;
     ErlangFunctionCallExpression callExpression = globalCallExpression.getFunctionCallExpression();
-    ErlangExpression firstArgExpression = callExpression.getArgumentList().getExpressionList().get(0);
+    List<ErlangExpression> argExpressionList = callExpression.getArgumentList().getExpressionList();
     // must be first arg
-    if (!PsiTreeUtil.isAncestor(firstArgExpression, psiElement, true)) return null;
+    if (argExpressionList.size() > 1 && !PsiTreeUtil.isAncestor(argExpressionList.get(0), psiElement, true)) return null;
     ErlangAtom funAtom = callExpression.getQAtom().getAtom();
     ErlangAtom moduleAtom = globalCallExpression.getModuleRef().getQAtom().getAtom();
     if (moduleAtom != null && funAtom != null && funAtom.getName().equals("get")) {

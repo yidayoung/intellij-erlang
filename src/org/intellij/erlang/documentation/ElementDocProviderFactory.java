@@ -64,20 +64,19 @@ public final class ElementDocProviderFactory {
       }
       return null; // TODO implement TypeDocProvider
     }
-    else if (psiElement instanceof ErlangQAtom){
-      VirtualFile virtualFile = getVirtualFile(psiElement);
-      if (virtualFile == null) return null;
-      if (virtualFile.getFileType() == ErlangFileType.TERMS){
-        return new ErlangConfigKeyDocProvider(virtualFile, psiElement);
-      }
-      if (virtualFile.getFileType() == ErlangFileType.HEADER){
-        return new ErlangMapsKeyDocProvider(psiElement);
-      }
-    }
     else if (psiElement instanceof ErlangRecordDefinition || psiElement instanceof ErlangTypedExpr){
       return new ErlangRecordDocProvider(psiElement);
     }
     else {
+      VirtualFile virtualFile = getVirtualFile(psiElement);
+      if (virtualFile != null){
+        if (virtualFile.getFileType() == ErlangFileType.TERMS){
+          return new ErlangConfigKeyDocProvider(virtualFile, psiElement);
+        }
+        if (virtualFile.getFileType() == ErlangFileType.HEADER){
+          return new ErlangMapsKeyDocProvider(psiElement);
+        }
+      }
       ErlangGlobalFunctionCallExpression erlGlobalFunctionCall = PsiTreeUtil.getParentOfType(
         psiElement, ErlangGlobalFunctionCallExpression.class);
       if (erlGlobalFunctionCall != null) {
@@ -89,7 +88,6 @@ public final class ElementDocProviderFactory {
         if (ErlangBifTable.isBif(moduleName, functionName, arity)) {
           PsiElement tentativeErlangModule = moduleRef.getReference().resolve();
           if (tentativeErlangModule instanceof ErlangModule) {
-            VirtualFile virtualFile = getVirtualFile(tentativeErlangModule);
             if (virtualFile != null) {
               return new ErlangSdkFunctionDocProvider(project, functionName, arity, virtualFile);
             }

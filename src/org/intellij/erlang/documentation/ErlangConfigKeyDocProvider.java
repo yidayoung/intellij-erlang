@@ -23,7 +23,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.intellij.erlang.psi.ErlangTupleExpression;
-import org.intellij.erlang.rebar.util.ErlangTermFileUtil;
+import org.intellij.erlang.utils.ErlangTermFileUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -48,15 +48,13 @@ public class ErlangConfigKeyDocProvider implements ElementDocProvider {
   @Override
   public String getDocText() {
     List<ErlangTupleExpression> configSections = ErlangTermFileUtil.getConfigSections(myPsiFile, myConfigKey.getText());
-    if (configSections.size() > 0) {
-      ErlangTupleExpression configTuple = configSections.get(0);
-      PsiComment comment = PsiTreeUtil.getPrevSiblingOfType(configTuple, PsiComment.class);
-      if (comment != null) {
-        String result = configTuple.getText() + "\n" + ErlangDocUtil.getCommentsText(
-          ErlangDocUtil.collectPrevComments(comment), "%%", ErlangDocUtil.EDOC_FUNCTION_TAGS);
-        return ErlangDocUtil.wrapInPreTag(result);
-      }
+    PsiElement configTuple = configSections.size() > 0 ? configSections.get(0) : myConfigKey.getParent();
+    PsiComment comment = PsiTreeUtil.getPrevSiblingOfType(configTuple, PsiComment.class);
+    String commentText = configTuple.getText();
+    if (comment != null) {
+      commentText += "\n\n" + ErlangDocUtil.getCommentsText(
+        ErlangDocUtil.collectPrevComments(comment), "%%", ErlangDocUtil.EDOC_FUNCTION_TAGS);
     }
-    return null;
+    return ErlangDocUtil.wrapInPreTag(commentText);
   }
 }

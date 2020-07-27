@@ -31,7 +31,6 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.CachedValue;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.*;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.MultiMap;
@@ -588,10 +587,7 @@ public class ErlangFileImpl extends PsiFileBase implements ErlangFile, PsiNameId
     while (child != null){
       if (child instanceof ErlangTupleExpression) {
         PsiElement key = ((ErlangTupleExpression) child).getExpressionList().get(0);
-        if (key instanceof ErlangConfigExpression && key.getFirstChild() instanceof ErlangQAtom) keys.add(key.getFirstChild());
-//        @todo support tuple key and string key int key etc.
-//        if (key instanceof ErlangTupleExpression) keys.add(key);
-//        if (key instanceof ErlangStringLiteral) keys.add(ErlangElementFactory.createQVarFromText(getProject(), key.getText()));
+        ContainerUtil.addIfNotNull(keys, key);
       }
       child = child.getNextSibling();
     }
