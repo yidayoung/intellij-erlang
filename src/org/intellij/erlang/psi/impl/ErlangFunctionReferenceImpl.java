@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 public class ErlangFunctionReferenceImpl extends ErlangPsiPolyVariantCachingReferenceBase<PsiElement> implements ErlangFunctionReference {
@@ -45,6 +46,9 @@ public class ErlangFunctionReferenceImpl extends ErlangPsiPolyVariantCachingRefe
   private final ErlangQAtom myModuleAtom;
   private final String myReferenceName;
   private final int myArity;
+
+  // @todo should could config by user
+  private final HashSet<String> configFuns = ContainerUtil.newHashSet("get", "keys", "get_list");
 
   public ErlangFunctionReferenceImpl(@NotNull PsiElement owner,
                                      @NotNull ErlangQAtom qAtom,
@@ -69,7 +73,7 @@ public class ErlangFunctionReferenceImpl extends ErlangPsiPolyVariantCachingRefe
         ErlangOperatorTable.canBeInvokedAsFunction(moduleName, myReferenceName, myArity) ||
         myReferenceName.equals(ErlangBifTable.MODULE_INFO) && (myArity == 1 || myArity == 0)
       );
-      if (moduleName.startsWith("data_") && !resolveToCallSite && explicitFunction == null){
+      if (configFuns.contains(myReferenceName) && !resolveToCallSite && explicitFunction == null){
         GlobalSearchScope scope = GlobalSearchScope.projectScope(myElement.getProject());
         PsiFile[] configFiles = FilenameIndex.getFilesByName(myElement.getProject(), moduleName + ".config", scope);
         if (configFiles.length == 0)

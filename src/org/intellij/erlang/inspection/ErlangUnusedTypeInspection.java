@@ -19,6 +19,7 @@ package org.intellij.erlang.inspection;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiReference;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.Query;
@@ -33,6 +34,8 @@ public class ErlangUnusedTypeInspection extends ErlangInspectionBase {
   protected void checkFile(@NotNull ErlangFile file, @NotNull final ProblemsHolder problemsHolder) {
     for (ErlangTypeDefinition o : file.getTypes()) {
       Query<PsiReference> search = ReferencesSearch.search(o, new LocalSearchScope(o.getContainingFile()));
+      if (search.findFirst() != null) continue;
+      search = ReferencesSearch.search(o, GlobalSearchScope.allScope(o.getProject()));
       if (search.findFirst() == null) {
         problemsHolder.registerProblem(o.getNameIdentifier(),
           "Unused type " + "'" + o.getName() + "'",

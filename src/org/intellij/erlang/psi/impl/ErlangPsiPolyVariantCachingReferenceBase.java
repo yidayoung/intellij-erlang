@@ -33,7 +33,7 @@ public abstract class ErlangPsiPolyVariantCachingReferenceBase<T extends PsiElem
   @Nullable
   @Override
   public final PsiElement resolve() {
-    return getElement().isValid()
+    return (getElement().isValid() && !ErlangPsiImplUtil.inConsoleFile(getElement()))
            ? ResolveCache.getInstance(getElement().getProject()).resolveWithCaching(this, MY_RESOLVER, false, false)
            : null;
   }

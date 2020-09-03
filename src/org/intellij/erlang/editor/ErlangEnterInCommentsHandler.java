@@ -57,7 +57,7 @@ public class ErlangEnterInCommentsHandler extends EnterHandlerDelegateAdapter {
       return Result.Continue;
     }
     PsiElement prevSibling = elementAtCaret.getPrevSibling();
-    if (!prevSibling.getText().contains("\n")) return Result.Continue;
+    if (prevSibling !=null && !prevSibling.getText().contains("\n")) return Result.Continue;
 
     TextRange commentRange = elementAtCaret.getTextRange();
     CharSequence commentText = commentRange.subSequence(text);

@@ -25,8 +25,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.intellij.erlang.ErlangParserDefinition;
-import org.intellij.erlang.psi.ErlangFile;
-import org.intellij.erlang.psi.ErlangFunction;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,6 +50,11 @@ public class ErlangFoldingBuilder extends FoldingBuilderEx implements DumbAware 
         if (ErlangParserDefinition.COMMENTS.contains(element.getNode().getElementType()) && element.getTextRange().getLength() > 2) {
           result.add(new FoldingDescriptor(element, element.getTextRange()));
         }
+        if (PsiTreeUtil.instanceOf(element,
+                                   ErlangCaseExpression.class,
+                                   ErlangIfExpression.class,
+                                   ErlangFunExpression.class))
+          result.add(new FoldingDescriptor(element, element.getTextRange()));
         return true;
       });
     }
@@ -67,6 +71,24 @@ public class ErlangFoldingBuilder extends FoldingBuilderEx implements DumbAware 
     if (ErlangParserDefinition.ERL_COMMENT == type) return "% ...";
     if (ErlangParserDefinition.ERL_FUNCTION_DOC_COMMENT == type) return "%% ...";
     if (ErlangParserDefinition.ERL_MODULE_DOC_COMMENT == type) return "%%% ...";
+    if (psi instanceof ErlangCaseExpression) {
+      PsiElement of = ((ErlangCaseExpression) psi).getOf();
+      if (of == null) return null;
+      return psi.getText().substring(0, of.getStartOffsetInParent()) + "...";
+    }
+    if (psi instanceof ErlangIfExpression) {
+      List<ErlangIfClause> ifClauseList = ((ErlangIfExpression) psi).getIfClauseList();
+      if (ifClauseList.size() == 0) return null;
+      ErlangIfClause erlangIfClause = ifClauseList.get(0);
+      if (erlangIfClause == null || erlangIfClause.getGuard() == null) return null;
+      return "if " + erlangIfClause.getGuard().getText() + "-> ...";
+    }
+    if (psi instanceof ErlangFunExpression) {
+      ErlangFunClauses funClauses = ((ErlangFunExpression) psi).getFunClauses();
+      if (funClauses == null) return null;
+      ErlangArgumentDefinitionList argumentDefinitionList = funClauses.getFunClauseList().get(0).getArgumentDefinitionList();
+      return "fun" + argumentDefinitionList.getText() + " -> ...";
+    }
     return null;
   }
 

@@ -52,7 +52,7 @@ public class ErlangModuleReferenceImpl extends ErlangQAtomBasedReferenceImpl {
   public PsiElement resolveInner() {
     GlobalSearchScope scope = getSearchScope();
     List<ErlangModule> modules = ErlangModuleIndex.getModulesByName(myElement.getProject(), myReferenceName, scope);
-    if (modules.size() == 0 && myReferenceName.startsWith("data_")){
+    if (modules.size() == 0){
       PsiFile[] configFiles = FilenameIndex.getFilesByName(myElement.getProject(), myReferenceName + ".config", scope);
       if (configFiles.length == 0)
         configFiles = FilenameIndex.getFilesByName(myElement.getProject(), myReferenceName.replace("data_", "") + ".config", scope);

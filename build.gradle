@@ -6,7 +6,7 @@ version = "${version}.$buildNumber"
 allprojects {
   apply plugin: 'java'
   sourceCompatibility = javaVersion
-  targetCompatibility = javaVersion
+  targetCompatibility = javaTargetVersion
   tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
 
   sourceSets {
@@ -60,7 +60,9 @@ repositories {
 
 dependencies {
   compile name: 'OtpErlang'
+  compileOnly name: 'protobuf-editor'
   compile project('jps-plugin')
+//  compileOnly "idea.plugin.protoeditor.ide"
 }
 
 apply plugin: 'idea'

@@ -33,11 +33,9 @@ import java.util.List;
 
 public class ErlangRecordDocProvider implements ElementDocProvider  {
   private final PsiElement myPsiElement;
-  private final Project myProject;
 
   public ErlangRecordDocProvider(PsiElement psiElement) {
     myPsiElement = psiElement;
-    myProject = psiElement.getProject();
   }
 
   @Nullable
@@ -57,7 +55,7 @@ public class ErlangRecordDocProvider implements ElementDocProvider  {
   }
 
   @Nullable
-  private String generateRecordFieldDoc(ErlangTypedExpr fieldType) {
+  private static String generateRecordFieldDoc(ErlangTypedExpr fieldType) {
     PsiElement parent = fieldType.getParent().getParent();
     if (!(parent instanceof ErlangRecordDefinition)) return null;
     ErlangRecordDefinition recordDefinition = (ErlangRecordDefinition) parent;
@@ -76,9 +74,9 @@ public class ErlangRecordDocProvider implements ElementDocProvider  {
   }
 
   @Nullable
-  private String generateRecordFieldDoc(ErlangRecordDefinition recordDefinition, ErlangTypedExpr fieldType) {
+  private static String generateRecordFieldDoc(ErlangRecordDefinition recordDefinition, ErlangTypedExpr fieldType) {
     String recordName = recordDefinition.getName();
-    PsiFile protoFile = findProtoFile(recordName, myProject);
+    PsiFile protoFile = findProtoFile(recordName, recordDefinition.getProject());
     if (protoFile == null) return null;
     return findDocInProtoFile(recordName, protoFile, fieldType.getName());
   }
@@ -106,6 +104,7 @@ public class ErlangRecordDocProvider implements ElementDocProvider  {
     return null;
   }
 
+  @Nullable
   private static PsiComment getFieldComment(PsiElement field) {
     if (field.getNextSibling() instanceof PsiComment)
       return (PsiComment) field.getNextSibling();
@@ -116,13 +115,13 @@ public class ErlangRecordDocProvider implements ElementDocProvider  {
   }
 
   @NotNull
-  private String generateRecordDoc(ErlangRecordDefinition recordDefinition) {
+  private static String generateRecordDoc(ErlangRecordDefinition recordDefinition) {
     String name = recordDefinition.getName();
     if (isProtoRecord(name)){
-      String docTextFromProto = getDocTextFromProto(name, myProject);
+      String docTextFromProto = getDocTextFromProto(name, recordDefinition.getProject());
       if (docTextFromProto != null) return docTextFromProto;
     }
-    return ErlangDocUtil.wrapInPreTag(myPsiElement.getText());
+    return ErlangDocUtil.wrapInPreTag(recordDefinition.getText());
   }
 
   private static boolean isProtoRecord(String name) {
