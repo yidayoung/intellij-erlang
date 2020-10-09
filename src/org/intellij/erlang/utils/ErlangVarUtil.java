@@ -87,7 +87,10 @@ public class ErlangVarUtil {
   @Nullable
   public static String getMapsVarNameBefore(ErlangMapExpression atomMapExpression){
     ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression, ErlangMaxExpression.class);
-    return expression != null ? expression.getText(): null;
+    String valName = expression != null ? expression.getText() : null;
+    if (valName != null && valName.startsWith("?") && valName.endsWith("_t"))
+      valName = valName.substring(1, valName.length()-2).replace("_", "");
+    return valName;
   }
 
   @Nullable

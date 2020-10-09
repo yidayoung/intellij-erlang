@@ -32,11 +32,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntention{
+
+  private static final String valIndexPatten = "(\\D+)(\\d+)?";
+
   protected ErlangIntroduceValueIntention() {
-    super("introduce val", "introduce val");
+    super("Introduce val", "Introduce val");
   }
 
   @Override
@@ -73,7 +78,7 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
     }
     ErlangExpression expression = findExpression(file, editor.getCaretModel().getOffset());
     if (expression == null) {
-      throw new IncorrectOperationException("Cursor should be placed on Erlang expression end.");
+      throw new IncorrectOperationException("Cursor should be placed on Erlang expression.");
     }
     String funName = null;
     String configKey = null;
@@ -97,6 +102,16 @@ public class ErlangIntroduceValueIntention extends ErlangBaseNamedElementIntenti
       addCommonName(funName, recommendVarNames);
       recommendVarNames.add(ErlangVarUtil.makeErlangVarName(funName));
       recommendVarNames.add("Result");
+    }
+    PsiElement parent = expression.getParent();
+    if (parent instanceof ErlangMapExpression){
+      Pattern r = Pattern.compile(valIndexPatten);
+      Matcher matcher = r.matcher(expression.getText());
+      if (matcher.find()) {
+        int valIndex = matcher.group(2) !=null ? Integer.parseInt(matcher.group(2)) : 1;
+        valIndex++;
+        recommendVarNames.add(0,matcher.group(1)+valIndex);
+      }
     }
     int textOffset = expression.getTextOffset();
     Template template = ErlangVarUtil.createVarDefinitionTemplate(project, recommendVarNames, true, "=");

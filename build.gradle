@@ -60,7 +60,7 @@ repositories {
 
 dependencies {
   compile name: 'OtpErlang'
-  compileOnly name: 'protobuf-editor'
+//  compileOnly name: 'protobuf-editor'
   compile project('jps-plugin')
 //  compileOnly "idea.plugin.protoeditor.ide"
 }

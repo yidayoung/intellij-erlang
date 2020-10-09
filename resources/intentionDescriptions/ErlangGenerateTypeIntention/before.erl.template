@@ -1,0 +1,5 @@
+-define(my_map, #{}).
+--
+-define(my_str, "").
+--
+-define(my_int, 1).

@@ -296,7 +296,10 @@
           <className>org.intellij.erlang.intention.ErlangGenerateDocIntention</className>
           <category>Erlang</category>
         </intentionAction>
-
+        <intentionAction>
+          <className>org.intellij.erlang.intention.ErlangGenerateTypeIntention</className>
+          <category>Erlang</category>
+        </intentionAction>
         <additionalTextAttributes scheme="Default" file="colorSchemes/ErlangDefault.xml"/>
         <additionalTextAttributes scheme="Darcula" file="colorSchemes/ErlangDarcula.xml"/>
     </extensions>

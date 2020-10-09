@@ -1,0 +1,8 @@
+-type my_map() :: map().
+-define(my_map, #{}).
+--
+-type my_str() :: string().
+-define(my_str, "").
+--
+-type my_int() :: integer().
+-define(my_int, 1).

@@ -97,6 +97,7 @@ public final class ErlangConsoleUtil {
           for (String app : apps) {
             codePath.add("-pa");
             codePath.add(FileUtil.join(buildOutput.getPath(), "lib", app, "ebin"));
+            codePath.add(FileUtil.join(buildOutput.getPath(), "lib", app, "test"));
           }
         }
       }

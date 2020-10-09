@@ -46,7 +46,7 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
           || inDefinitionBeforeArgumentList(o)
           || inLeftPartOfAssignment(o) || inAtomAttribute(o)
           || isForceSkipped(o) || inSpecification(o) || inDefine(o)
-          || inCallback(o) || inRecordDefinition(o)|| inMacroArguments(o))  {
+          || inCallback(o) || inRecordDefinition(o))  {
           return;
         }
 
