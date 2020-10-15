@@ -147,7 +147,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     }
 
     VirtualFile rootRebar = myProjectRoot.findChild("rebar.config");
-    if (rootRebar == null){
+    if (rootRebar == null) {
       Messages.showErrorDialog("no rebar.config in root", "Rebar Project Import");
       return false;
     }
@@ -175,11 +175,11 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
 
   @NotNull
   private ArrayList<ImportedOtpApp> getDepsImportedOtpApps(@NotNull ProgressIndicator indicator,
-                                                               @NotNull VirtualFile projectRoot) {
+                                                           @NotNull VirtualFile projectRoot) {
     VirtualFile depsRoot = getDepsDir(projectRoot);
     assert myProjectRoot != null;
     final ArrayList<ImportedOtpApp> importedOtpApps = new ArrayList<>();
-    if (depsRoot == null){
+    if (depsRoot == null) {
       return importedOtpApps;
     }
     VfsUtilCore.visitChildrenRecursively(depsRoot, new VirtualFileVisitor<Void>(VirtualFileVisitor.SKIP_ROOT) {
@@ -292,19 +292,20 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
             compilerModuleExt.setCompilerOutputPathForTests(moduleTestLibDirUrl);
           }
           else {
-            compilerModuleExt.setCompilerOutputPath(FileUtil.join(moduleLibDirUrl, "lib", importedOtpApp.getName(), "ebin"));
-            compilerModuleExt.setCompilerOutputPathForTests(FileUtil.join(moduleTestLibDirUrl, "lib", importedOtpApp.getName(), "ebin"));
+            compilerModuleExt.setCompilerOutputPath(moduleLibDirUrl + File.separator + FileUtil.join("lib", importedOtpApp.getName(), "ebin"));
+            compilerModuleExt.setCompilerOutputPathForTests(moduleTestLibDirUrl + File.separator + FileUtil.join("lib", importedOtpApp.getName(), "ebin"));
           }
         }
         else {
-          compilerModuleExt.setCompilerOutputPath(FileUtil.join(ideaModuleDirPath, "ebin"));
-          compilerModuleExt.setCompilerOutputPathForTests(FileUtil.join(ideaModuleDirPath, ".eunit"));
+          compilerModuleExt.setCompilerOutputPath(ideaModuleDir + File.separator + "ebin");
+          compilerModuleExt.setCompilerOutputPathForTests(ideaModuleDir + File.separator + ".eunit");
         }
         createdRootModels.add(rootModel);
         // Set inter-module dependencies
         Set<String> unResolveModules = resolveModuleDeps(rootModel, importedOtpApp, projectSdk, selectedAppNames);
-        if (unResolveModules.size() > 0 )
-          Messages.showWarningDialog(String.format("Module %s has modules not find:",importedOtpApp.getName())+unResolveModules, "Rebar Import");
+        if (unResolveModules.size() > 0) {
+          Messages.showWarningDialog(String.format("Module %s has modules not find:", importedOtpApp.getName()) + unResolveModules, "Rebar Import");
+        }
       }
     }
     // Commit project structure.
@@ -467,7 +468,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
                                                @NotNull Set<String> allImportedAppNames) {
     HashSet<String> unresolvedAppNames = new HashSet<>();
     for (String depAppName : importedOtpApp.getDeps()) {
-      if (depAppName.equals(rootModel.getModule().getName())){
+      if (depAppName.equals(rootModel.getModule().getName())) {
         Messages.showWarningDialog(String.format("module %s deps contains it self! check you app or app.src", depAppName), "Rebar Import");
         continue;
       }
