@@ -26,21 +26,29 @@ import org.intellij.erlang.sdk.ErlangSdkType;
 import org.jetbrains.annotations.NotNull;
 
 public class RebarProjectImportProvider extends ProjectImportProvider {
-  @Override
-  protected ProjectImportBuilder doGetBuilder() {
-    return new RebarProjectImportBuilder();
+
+  public RebarProjectImportProvider() {
+    myBuilder = ProjectImportBuilder.EXTENSIONS_POINT_NAME.findExtensionOrFail(RebarProjectImportBuilder.class);
   }
 
   public ModuleWizardStep[] createSteps(@NotNull WizardContext context) {
-    return new ModuleWizardStep[]{
-      new RebarProjectRootStep(context),
-      new SelectImportedOtpAppsStep(context),
-      new ProjectJdkForModuleStep(context, ErlangSdkType.getInstance())};
+    RebarProjectRootStep rebarProjectRootStep = new RebarProjectRootStep(context);
+    RebarProjectImportBuilder builder = (RebarProjectImportBuilder) myBuilder;
+    builder.setRootStep(rebarProjectRootStep);
+    if (context.getProject() == null)
+      return new ModuleWizardStep[]{
+        rebarProjectRootStep,
+        new SelectImportedOtpAppsStep(context),
+        new ProjectJdkForModuleStep(context, ErlangSdkType.getInstance())};
+    else
+      return new ModuleWizardStep[]{
+        rebarProjectRootStep,
+        new SelectImportedOtpAppsStep(context)};
   }
 
   @Override
   protected boolean canImportFromFile(@NotNull VirtualFile file) {
-    return "rebar.config".equals(file.getExtension());
+    return "rebar.config".equals(file.getName());
   }
 
   @Override

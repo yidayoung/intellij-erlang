@@ -17,6 +17,7 @@
 package org.intellij.erlang.rebar.importWizard;
 
 import com.intellij.compiler.CompilerWorkspaceConfiguration;
+import com.intellij.ide.highlighter.ModuleFileType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ex.ApplicationInfoEx;
 import com.intellij.openapi.diagnostic.Logger;
@@ -80,6 +81,8 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
 
   private static final String REBAR3_BUILD_PATH = FileUtil.join("_build", "default");
   private static final String REBAR3_TEST_BUILD_PATH = FileUtil.join("_build", "test");
+
+  private RebarProjectRootStep rootStep;
 
   @NotNull
   @NonNls
@@ -177,7 +180,6 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
   private ArrayList<ImportedOtpApp> getDepsImportedOtpApps(@NotNull ProgressIndicator indicator,
                                                            @NotNull VirtualFile projectRoot) {
     VirtualFile depsRoot = getDepsDir(projectRoot);
-    assert myProjectRoot != null;
     final ArrayList<ImportedOtpApp> importedOtpApps = new ArrayList<>();
     if (depsRoot == null) {
       return importedOtpApps;
@@ -249,6 +251,9 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
                              @Nullable ModifiableModuleModel moduleModel,
                              @NotNull ModulesProvider modulesProvider,
                              @Nullable ModifiableArtifactModel modifiableArtifactModel) {
+    final boolean fromProjectStructure = moduleModel != null;
+    ModifiableModuleModel obtainedModuleModel =
+      moduleModel != null ? moduleModel : ModuleManager.getInstance(project).getModifiableModel();
     Set<String> selectedAppNames = new HashSet<>();
     for (ImportedOtpApp importedOtpApp : mySelectedOtpApps) {
       selectedAppNames.add(importedOtpApp.getName());
@@ -256,21 +261,24 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
     Sdk projectSdk = fixProjectSdk(project);
     List<Module> createdModules = new ArrayList<>();
     final List<ModifiableRootModel> createdRootModels = new ArrayList<>();
-    final ModifiableModuleModel obtainedModuleModel =
-      moduleModel != null ? moduleModel : ModuleManager.getInstance(project).getModifiableModel();
-    assert myProjectRoot != null;
-    String moduleLibDirUrl = VfsUtilCore.pathToUrl(FileUtil.join(myProjectRoot.getPath(), REBAR3_BUILD_PATH));
-    String moduleTestLibDirUrl = VfsUtilCore.pathToUrl(FileUtil.join(myProjectRoot.getPath(), REBAR3_TEST_BUILD_PATH));
+    String moduleLibDirUrl = VfsUtilCore.pathToUrl(FileUtil.join(project.getBasePath(), REBAR3_BUILD_PATH));
+    String moduleTestLibDirUrl = VfsUtilCore.pathToUrl(FileUtil.join(project.getBasePath(), REBAR3_TEST_BUILD_PATH));
 
     for (ImportedOtpApp importedOtpApp : mySelectedOtpApps) {
+      Module obtainedModule = obtainedModuleModel.findModuleByName(importedOtpApp.getName());
+      if (obtainedModule != null) {
+        Messages.showWarningDialog(String.format("Module %s has imported, maybe you should delete it, otherwise will ignore this module", importedOtpApp.getName()), "Rebar Import");
+        continue;
+      }
       VirtualFile ideaModuleDir = importedOtpApp.getRoot();
       String ideaModuleDirPath = ideaModuleDir.getCanonicalPath();
-      String ideaModuleFile = ideaModuleDirPath + File.separator + importedOtpApp.getName() + ".iml";
+      String ideaModuleFile = ideaModuleDirPath + File.separator + importedOtpApp.getName() + ModuleFileType.DOT_DEFAULT_EXTENSION;
       Module module = obtainedModuleModel.newModule(ideaModuleFile, ErlangModuleType.getInstance().getId());
       createdModules.add(module);
       importedOtpApp.setModule(module);
       if (importedOtpApp.getIdeaModuleFile() == null) {
         ModifiableRootModel rootModel = ModuleRootManager.getInstance(module).getModifiableModel();
+        createdRootModels.add(rootModel);
         // Make it inherit SDK from the project.
         rootModel.inheritSdk();
         // Initialize source and test paths.
@@ -300,7 +308,7 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
           compilerModuleExt.setCompilerOutputPath(ideaModuleDir + File.separator + "ebin");
           compilerModuleExt.setCompilerOutputPathForTests(ideaModuleDir + File.separator + ".eunit");
         }
-        createdRootModels.add(rootModel);
+
         // Set inter-module dependencies
         Set<String> unResolveModules = resolveModuleDeps(rootModel, importedOtpApp, projectSdk, selectedAppNames);
         if (unResolveModules.size() > 0) {
@@ -314,8 +322,10 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
       for (ModifiableRootModel rootModel : createdRootModels) {
         rootModel.commit();
       }
-      obtainedModuleModel.commit();
+      if (!fromProjectStructure)
+        obtainedModuleModel.commit();
     });
+
 
     addErlangFacets(mySelectedOtpApps);
     RebarSettings.getInstance(project).setRebarPath(myRebarPath);
@@ -506,5 +516,16 @@ public class RebarProjectImportBuilder extends ProjectImportBuilder<ImportedOtpA
 
   public void setIsImportingProject(boolean isImportingProject) {
     myIsImportingProject = isImportingProject;
+  }
+
+  @Override
+  public void setFileToImport(String path) {
+    super.setFileToImport(path);
+    if (rootStep != null)
+      rootStep.setProjectFileDirectory(path);
+  }
+
+  public void setRootStep(RebarProjectRootStep rootStep) {
+    this.rootStep = rootStep;
   }
 }

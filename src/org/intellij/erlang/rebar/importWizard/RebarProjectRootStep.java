@@ -57,15 +57,22 @@ public class RebarProjectRootStep extends ProjectImportWizardStep {
   private RebarConfigurationForm myRebarConfigurationForm;
   private static final boolean ourEnabled = !SystemInfo.isWindows;
 
+  public void setProjectFileDirectory(String path) {
+    VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(path);
+    String dirPath;
+    if (virtualFile == null)
+      dirPath = path;
+    else
+      dirPath = virtualFile.isDirectory() ? virtualFile.getPath() : virtualFile.getParent().getPath();
+    myProjectRootComponent.setText(dirPath); // provide project path
+    myRebarConfigurationForm.setPath(RebarRunningStateUtil.getRebarPath(dirPath));
+  }
+
   public RebarProjectRootStep(WizardContext context) {
     super(context);
-    String projectFileDirectory = context.getProjectFileDirectory();
     myProjectRootComponent.addBrowseFolderListener("Select rebar.config of a Rebar Project to Import", "", null,
                                                    FileChooserDescriptorFactory.createSingleFolderDescriptor());
-    myProjectRootComponent.setText(projectFileDirectory); // provide project path
-
     myGetDepsCheckbox.setVisible(ourEnabled);
-    myRebarConfigurationForm.setPath(RebarRunningStateUtil.getRebarPath(projectFileDirectory));
   }
 
   @Override
