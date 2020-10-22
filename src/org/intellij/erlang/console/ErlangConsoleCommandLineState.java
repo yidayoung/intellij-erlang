@@ -59,7 +59,7 @@ public class ErlangConsoleCommandLineState extends CommandLineState {
     commandLine.setExePath(ErlangConsoleUtil.getErlPath(project, module));
     String consoleArgs = myConfig.getConsoleArgs();
     commandLine.addParameters(StringUtil.split(consoleArgs, " "));
-    commandLine.addParameters(ErlangConsoleUtil.getCodePath(project, module, false));
+    commandLine.addParameters(ErlangConsoleUtil.getCodePath(project, module, myConfig.isUseTestCodePath()));
     commandLine.setWorkDirectory(ErlangConsoleUtil.getWorkingDirPath(project, myConfig.getWorkingDirPath()));
     OSProcessHandler handler = new OSProcessHandler(commandLine.createProcess(), commandLine.getCommandLineString()){
       @NotNull

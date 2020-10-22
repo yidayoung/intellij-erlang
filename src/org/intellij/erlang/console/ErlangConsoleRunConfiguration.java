@@ -40,6 +40,7 @@ import java.util.Collection;
 public final class ErlangConsoleRunConfiguration extends ModuleBasedConfiguration<RunConfigurationModule, Element> {
   @NotNull private String myWorkingDirPath;
   private String myConsoleArgs;
+  private Boolean myUseTestCodePath;
 
   public ErlangConsoleRunConfiguration(@NotNull String name, @NotNull Project project) {
     super(name, new RunConfigurationModule(project), ErlangConsoleRunConfigurationFactory.getInstance());
@@ -108,5 +109,13 @@ public final class ErlangConsoleRunConfiguration extends ModuleBasedConfiguratio
   @NotNull
   public String getConsoleArgs() {
     return myConsoleArgs;
+  }
+
+  public Boolean isUseTestCodePath() {
+    return myUseTestCodePath;
+  }
+
+  public void setUseTestCodePath(Boolean useTestCodePath) {
+    myUseTestCodePath = useTestCodePath;
   }
 }

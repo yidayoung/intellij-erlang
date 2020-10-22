@@ -35,6 +35,7 @@ public final class ErlangConsoleRunConfigurationForm extends SettingsEditor<Erla
   private RawCommandLineEditor myConsoleArgsEditor;
   private TextFieldWithBrowseButton myWorkingDirPathField;
   private JComboBox<Module> myModuleComboBox;
+  private JCheckBox myUseTestsCodePathCheckBox;
 
   @Nullable private final Module myInitialModule;
 
@@ -43,6 +44,7 @@ public final class ErlangConsoleRunConfigurationForm extends SettingsEditor<Erla
     myModuleComboBox.setEnabled(true);
     ErlangUiUtil.installWorkingDirectoryChooser(myWorkingDirPathField, project);
     myWorkingDirPathField.setText(project.getBasePath());
+
   }
 
   @Override
@@ -59,6 +61,7 @@ public final class ErlangConsoleRunConfigurationForm extends SettingsEditor<Erla
     myWorkingDirPathField.setText(config.getWorkingDirPath());
     myModuleComboBox.setSelectedItem(config.getConfigurationModule().getModule());
     myConsoleArgsEditor.setText(config.getConsoleArgs());
+    myUseTestsCodePathCheckBox.setSelected(config.isUseTestCodePath());
   }
 
   @Override
@@ -66,6 +69,7 @@ public final class ErlangConsoleRunConfigurationForm extends SettingsEditor<Erla
     config.setModule((Module) myModuleComboBox.getSelectedItem());
     config.setWorkingDirPath(myWorkingDirPathField.getText());
     config.setConsoleArgs(myConsoleArgsEditor.getText());
+    config.setUseTestCodePath(myUseTestsCodePathCheckBox.isSelected());
   }
 
   @NotNull

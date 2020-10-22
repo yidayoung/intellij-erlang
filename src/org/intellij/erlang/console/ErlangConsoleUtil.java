@@ -25,12 +25,7 @@ import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.CompilerModuleExtension;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ProjectRootManager;
-import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import org.intellij.erlang.facet.ErlangFacet;
-import org.intellij.erlang.facet.ErlangFacetConfiguration;
-import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,14 +75,14 @@ public final class ErlangConsoleUtil {
         compilerModuleExt.getCompilerOutputPath();
       if (buildOutput != null) {
         codePath.add("-pa");
-        codePath.add(buildOutput.getCanonicalPath());
+        codePath.add(buildOutput.getPath());
       }
       if (useTestOutputPath && buildOutput != null) {
         // add test dir to path if exist
         VirtualFile testDir = buildOutput.getParent().findChild("test");
         if (testDir != null){
           codePath.add("-pa");
-          codePath.add(testDir.getCanonicalPath());
+          codePath.add(testDir.getPath());
         }
       }
     }
