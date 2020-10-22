@@ -26,14 +26,14 @@ import org.intellij.erlang.sdk.ErlangSdkType;
 import org.jetbrains.annotations.NotNull;
 
 public class RebarProjectImportProvider extends ProjectImportProvider {
-
-  public RebarProjectImportProvider() {
-    myBuilder = ProjectImportBuilder.EXTENSIONS_POINT_NAME.findExtensionOrFail(RebarProjectImportBuilder.class);
+  @Override
+  protected RebarProjectImportBuilder doGetBuilder() {
+    return ProjectImportBuilder.EXTENSIONS_POINT_NAME.findExtensionOrFail(RebarProjectImportBuilder.class);
   }
 
   public ModuleWizardStep[] createSteps(@NotNull WizardContext context) {
     RebarProjectRootStep rebarProjectRootStep = new RebarProjectRootStep(context);
-    RebarProjectImportBuilder builder = (RebarProjectImportBuilder) myBuilder;
+    RebarProjectImportBuilder builder = doGetBuilder();
     builder.setRootStep(rebarProjectRootStep);
     if (context.getProject() == null)
       return new ModuleWizardStep[]{

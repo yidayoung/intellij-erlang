@@ -75,30 +75,19 @@ public final class ErlangConsoleUtil {
       ModuleRootManager moduleRootManager = ModuleRootManager.getInstance(codePathModule);
       CompilerModuleExtension compilerModuleExt =
         moduleRootManager.getModuleExtension(CompilerModuleExtension.class);
-      VirtualFile buildOutput = useTestOutputPath && codePathModule == module ?
+      VirtualFile buildOutput = useTestOutputPath ?
         getCompilerOutputPathForTests(compilerModuleExt) : 
         compilerModuleExt.getCompilerOutputPath();
       if (buildOutput != null) {
         codePath.add("-pa");
         codePath.add(buildOutput.getCanonicalPath());
       }
-      for (VirtualFile contentRoot : ModuleRootManager.getInstance(codePathModule).getContentRoots()) {
-        codePath.add("-pa");
-        codePath.add(contentRoot.getPath());
-      }
-      ErlangFacet facet = ErlangFacet.getFacet(codePathModule);
-      if (facet != null) {
-        ErlangFacetConfiguration configuration = facet.getConfiguration();
-        String appsDirPath = configuration.getAppsDirPath();
-        VirtualFile appDir = appsDirPath != null ?LocalFileSystem.getInstance().findFileByPath(appsDirPath):null;
-        HashSet<String> apps = new HashSet<>();
-        if (appDir != null && buildOutput != null){
-          RebarConfigUtil.calcApps(appDir, apps);
-          for (String app : apps) {
-            codePath.add("-pa");
-            codePath.add(FileUtil.join(buildOutput.getPath(), "lib", app, "ebin"));
-            codePath.add(FileUtil.join(buildOutput.getPath(), "lib", app, "test"));
-          }
+      if (useTestOutputPath && buildOutput != null) {
+        // add test dir to path if exist
+        VirtualFile testDir = buildOutput.getParent().findChild("test");
+        if (testDir != null){
+          codePath.add("-pa");
+          codePath.add(testDir.getCanonicalPath());
         }
       }
     }

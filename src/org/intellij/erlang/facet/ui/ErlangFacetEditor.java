@@ -16,6 +16,7 @@
 
 package org.intellij.erlang.facet.ui;
 
+import com.intellij.facet.Facet;
 import com.intellij.facet.ui.FacetEditorContext;
 import com.intellij.facet.ui.FacetEditorTab;
 import com.intellij.openapi.util.text.CharFilter;
@@ -33,8 +34,9 @@ import java.util.List;
 public class ErlangFacetEditor extends FacetEditorTab {
   private JPanel myRootPanel;
   private JTextField myParseTransformsEditorField;
+  private JTextField myGlobalIncludesField;
 
-  private final ErlangFacetConfiguration myConfiguration;
+  private ErlangFacetConfiguration myConfiguration;
   private boolean myIsModified = false;
 
   public ErlangFacetEditor(@SuppressWarnings("UnusedParameters") FacetEditorContext editorContext, ErlangFacetConfiguration configuration) {
@@ -42,6 +44,12 @@ public class ErlangFacetEditor extends FacetEditorTab {
     myParseTransformsEditorField.getDocument().addDocumentListener(new DocumentAdapter() {
       @Override
       protected void textChanged(DocumentEvent e) {
+        myIsModified = true;
+      }
+    });
+    myGlobalIncludesField.getDocument().addDocumentListener(new DocumentAdapter() {
+      @Override
+      protected void textChanged(@NotNull DocumentEvent e) {
         myIsModified = true;
       }
     });
@@ -68,6 +76,7 @@ public class ErlangFacetEditor extends FacetEditorTab {
   @Override
   public void reset() {
     myParseTransformsEditorField.setText(getConfigurationParseTransforms());
+    myGlobalIncludesField.setText(getGlobalIncludes());
     myIsModified = false;
   }
 
@@ -78,6 +87,7 @@ public class ErlangFacetEditor extends FacetEditorTab {
   @Override
   public void apply() {
     myConfiguration.setParseTransformsFrom(getUiParseTransforms());
+    myConfiguration.setGlobalIncludes(getUiGlobalIncludes());
     myIsModified = false;
   }
 
@@ -92,5 +102,18 @@ public class ErlangFacetEditor extends FacetEditorTab {
       String strippedModuleName = StringUtil.strip(s, CharFilter.NOT_WHITESPACE_FILTER);
       return StringUtil.isEmpty(strippedModuleName) ? null : strippedModuleName;
     });
+  }
+
+  private List<String> getUiGlobalIncludes(){
+    String parseTransformsString = myGlobalIncludesField.getText();
+    List<String> split = StringUtil.split(parseTransformsString, ";");
+    return ContainerUtil.mapNotNull(split, s -> {
+      String strippedModuleName = StringUtil.strip(s, CharFilter.NOT_WHITESPACE_FILTER);
+      return StringUtil.isEmpty(strippedModuleName) ? null : strippedModuleName;
+    });
+  }
+
+  private String getGlobalIncludes(){
+    return StringUtil.join(myConfiguration.getGlobalIncludes(), ";");
   }
 }

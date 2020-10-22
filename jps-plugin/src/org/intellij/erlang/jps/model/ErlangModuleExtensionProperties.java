@@ -16,25 +16,24 @@
 
 package org.intellij.erlang.jps.model;
 
-import com.intellij.util.xmlb.annotations.AbstractCollection;
-import com.intellij.util.xmlb.annotations.Tag;
+import com.intellij.util.xmlb.annotations.XCollection;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ErlangModuleExtensionProperties {
-  @Tag("parseTransforms")
-  @AbstractCollection(surroundWithTag = false, elementTag = "transform")
   //should not contain duplicate elements
+  @XCollection(propertyElementName = "transforms", elementName = "transform", valueAttributeName = "")
   public List<String> myParseTransforms = new ArrayList<>();
-  public String myAppsDirPath = null;
+  @XCollection(propertyElementName = "includeDir", elementName = "path", valueAttributeName = "")
+  public List<String> myGlobalIncludes = new ArrayList<>();
 
   public ErlangModuleExtensionProperties() {
   }
 
   public ErlangModuleExtensionProperties(@NotNull ErlangModuleExtensionProperties props) {
     myParseTransforms = new ArrayList<>(props.myParseTransforms);
-    myAppsDirPath = props.myAppsDirPath;
+    myGlobalIncludes = new ArrayList<>(props.myGlobalIncludes);
   }
 }

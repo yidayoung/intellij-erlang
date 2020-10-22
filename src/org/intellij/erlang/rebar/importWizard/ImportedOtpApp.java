@@ -18,7 +18,6 @@ package org.intellij.erlang.rebar.importWizard;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -30,80 +29,69 @@ import org.intellij.erlang.rebar.util.RebarConfigUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 final class ImportedOtpApp {
   private String myName;
-  private final VirtualFile myRoot;
+
   private final Set<String> myDeps = new HashSet<>();
   private final Set<VirtualFile> myIncludePaths = new HashSet<>();
   private final Set<VirtualFile> mySourcePaths = new HashSet<>();
   private final Set<VirtualFile> myTestPaths = new HashSet<>();
   private final Set<String> myApps = new HashSet<>();
   private final Set<String> myParseTransforms = new HashSet<>();
-  private final Boolean myIsRebar3;
+  private final Set<String> myGlobalIncludes = new HashSet<>();
+
   @Nullable
-  private VirtualFile myIdeaModuleFile;
+  private String myIdeaModuleFilePath;
+  private VirtualFile myRoot;
+  private Boolean myIsRebar3;
   private Module myModule;
   private String myAppDirPath;
+  private Boolean myIsWriteAble;
+  private String myGroup;
 
 
-  public ImportedOtpApp(@NotNull VirtualFile root, @NotNull final VirtualFile appConfig, Boolean isRebar3) {
-    myRoot = root;
-    myName = StringUtil.trimEnd(StringUtil.trimEnd(appConfig.getName(), ".src"), ".app");
-    ApplicationManager.getApplication().runReadAction(() -> {
-      addDependenciesFromAppFile(appConfig);
-      addInfoFromRebarConfig();
-      addPath(myRoot, "src", mySourcePaths);
-      addPath(myRoot, "test", myTestPaths);
-      addPath(myRoot, "include", myIncludePaths);
-    });
+  private void InitApp(@NotNull VirtualFile root,
+                       @Nullable final VirtualFile appConfig,
+                       Boolean isRebar3,
+                       Boolean isRoot) {
+    myName = appConfig == null ? root.getName() : getApplicationName(appConfig);
+    myIsWriteAble = true;
     myIsRebar3 = isRebar3;
-  }
-
-
-  public ImportedOtpApp(@NotNull VirtualFile root, Boolean isRebar3) {
     myRoot = root;
-    VirtualFile appDir = isRebar3 ? root.findChild("apps") : root;
-    myIsRebar3 = isRebar3;
-
     ApplicationManager.getApplication().runReadAction(() -> {
+      if (appConfig != null) addDependenciesFromAppFile(appConfig);
       addInfoFromRebarConfig();
-      if (isRebar3) {
-        myName = root.getName();
-        if (appDir != null) {
-          myAppDirPath = appDir.getPath();
-          RebarConfigUtil.calcApps(appDir, myApps);
-          for (String app : myApps){
-            addPath(appDir, FileUtil.join(app, "src"), mySourcePaths);
-            addPath(appDir, FileUtil.join(app, "test"), myTestPaths);
-            addPath(appDir, FileUtil.join(app, "include"), myIncludePaths);
-          }
+      if (isRebar3 && isRoot){
+        // rebar3 root module is empty， but has apps
+        VirtualFile appsFile = root.findChild("apps");
+        if (appsFile != null){
+          myAppDirPath = appsFile.getPath();
+          RebarConfigUtil.calcApps(appsFile, myApps);
+          myDeps.addAll(myApps);
         }
       }
       else {
-        VirtualFile appResourceFile = RebarConfigUtil.findAppResourceFile(myRoot);
-        assert appResourceFile != null;
-        addDependenciesFromAppFile(appResourceFile);
-        String appName = StringUtil.trimEnd(StringUtil.trimEnd(appResourceFile.getName(), ".src"), ".app");
-        myApps.add(appName);
-        myName = appName;
-        VirtualFile ebinDir = myRoot.findChild("ebin");
-        if (ebinDir != null) {
-          HashSet<VirtualFile> files = findAppFileFromEbin(ebinDir);
-          for (VirtualFile file : files) {
-            addDependenciesFromAppFile(file);
-          }
-        }
         addPath(myRoot, "src", mySourcePaths);
         addPath(myRoot, "test", myTestPaths);
         addPath(myRoot, "include", myIncludePaths);
       }
-
     });
+  }
+  public ImportedOtpApp(@NotNull VirtualFile root, final VirtualFile appConfig, Boolean isRebar3){
+    InitApp(root, appConfig, isRebar3, false);
+  }
+  public ImportedOtpApp(@NotNull VirtualFile root, Boolean isRebar3) {
+    InitApp(root, null, isRebar3, true);
+  }
 
+  @NotNull
+  private static String getApplicationName(@NotNull VirtualFile appConfig) {
+    return StringUtil.trimEnd(StringUtil.trimEnd(appConfig.getName(), ".src"), ".app");
   }
 
   private static HashSet<VirtualFile> findAppFileFromEbin(VirtualFile ebinRoot) {
@@ -113,8 +101,6 @@ final class ImportedOtpApp {
     }
     return files;
   }
-
-
 
 
   @NotNull
@@ -136,13 +122,13 @@ final class ImportedOtpApp {
     return myIncludePaths;
   }
 
-  public void setIdeaModuleFile(@Nullable VirtualFile ideaModuleFile) {
-    myIdeaModuleFile = ideaModuleFile;
+  public void setIdeaModuleFilePath(@Nullable String ideaModuleFilePath) {
+    myIdeaModuleFilePath = ideaModuleFilePath;
   }
 
   @Nullable
-  public VirtualFile getIdeaModuleFile() {
-    return myIdeaModuleFile;
+  public String getIdeaModuleFilePath() {
+    return myIdeaModuleFilePath;
   }
 
   public Module getModule() {
@@ -155,6 +141,10 @@ final class ImportedOtpApp {
 
   public Set<String> getParseTransforms() {
     return myParseTransforms;
+  }
+  public void addParseTransforms(Collection<String> newParseTransforms){
+    if (newParseTransforms.isEmpty()) return;
+    myParseTransforms.addAll(newParseTransforms);
   }
 
   @Override
@@ -218,7 +208,6 @@ final class ImportedOtpApp {
   private void addDependenciesFromRebarConfig(ErlangFile rebarConfig) {
     myDeps.addAll(RebarConfigUtil.getDependencyAppNames(rebarConfig));
   }
-
   private void addIncludePathsFromRebarConfig(ErlangFile rebarConfig) {
     for (String includePath : RebarConfigUtil.getIncludePaths(rebarConfig)) {
       addPath(myRoot, includePath, myIncludePaths);
@@ -254,5 +243,30 @@ final class ImportedOtpApp {
 
   public String getAppDirPath() {
     return myAppDirPath;
+  }
+
+  public Boolean getWriteAble() {
+    return myIsWriteAble;
+  }
+
+  public void setWriteAble(Boolean writeAble) {
+    myIsWriteAble = writeAble;
+  }
+
+  public String getGroup() {
+    return myGroup;
+  }
+
+  public void setGroup(String group) {
+    myGroup = group;
+  }
+
+  public void addGlobalIncludes(Collection<String> newIncludeDirs){
+    if (newIncludeDirs.isEmpty()) return;
+    myGlobalIncludes.addAll(newIncludeDirs);
+  }
+
+  public Set<String> getGlobalIncludes() {
+    return myGlobalIncludes;
   }
 }

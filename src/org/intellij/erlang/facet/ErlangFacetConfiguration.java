@@ -34,7 +34,6 @@ import java.util.List;
 
 public class ErlangFacetConfiguration implements FacetConfiguration, PersistentStateComponent<ErlangModuleExtensionProperties> {
   private ErlangModuleExtensionProperties myState = new ErlangModuleExtensionProperties();
-
   @Override
   public FacetEditorTab[] createEditorTabs(FacetEditorContext editorContext, FacetValidatorsManager validatorsManager) {
     return new FacetEditorTab[] {new ErlangFacetEditor(editorContext, this)};
@@ -64,11 +63,10 @@ public class ErlangFacetConfiguration implements FacetConfiguration, PersistentS
     setParseTransformsFrom(ContainerUtil.concat(myState.myParseTransforms, newParseTransforms));
   }
 
-  public String getAppsDirPath(){
-    return myState.myAppsDirPath;
-  }
 
-  public void setAppsDirPath(String path){
-    myState.myAppsDirPath = path;
+  public List<String> getGlobalIncludes(){return Collections.unmodifiableList(myState.myGlobalIncludes);}
+
+  public void setGlobalIncludes(Iterable<String> globalIncludes){
+    myState.myGlobalIncludes = new ArrayList<>(ContainerUtil.newLinkedHashSet(globalIncludes));
   }
 }
