@@ -46,6 +46,7 @@ public final class ErlangConsoleRunConfiguration extends ModuleBasedConfiguratio
     super(name, new RunConfigurationModule(project), ErlangConsoleRunConfigurationFactory.getInstance());
     myWorkingDirPath = ObjectUtils.assertNotNull(project.getBasePath());
     myConsoleArgs = "";
+    myUseTestCodePath = false;
   }
 
   @NotNull

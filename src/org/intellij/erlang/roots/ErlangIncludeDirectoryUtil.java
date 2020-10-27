@@ -20,14 +20,12 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ContentEntry;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.ModuleRootManager;
-import com.intellij.openapi.roots.OrderRootType;
-import com.intellij.openapi.roots.libraries.Library;
-import com.intellij.openapi.roots.libraries.LibraryTable;
-import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.containers.ContainerUtil;
+import org.intellij.erlang.facet.ErlangFacet;
 import org.intellij.erlang.jps.model.ErlangIncludeSourceRootType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +40,13 @@ public final class ErlangIncludeDirectoryUtil {
   public static List<VirtualFile> getIncludeDirectories(@Nullable Module module) {
     if (module == null) return ContainerUtil.emptyList();
     ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
-    return rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
+    List<VirtualFile> includeDirs = rootManager.getSourceRoots(ErlangIncludeSourceRootType.INSTANCE);
+    ErlangFacet facet = ErlangFacet.getFacet(module);
+    if (facet != null){
+      List<VirtualFile> globalIncludes = ContainerUtil.map(facet.getConfiguration().getGlobalIncludes(), path -> LocalFileSystem.getInstance().findFileByPath(path));
+      includeDirs.addAll(globalIncludes);
+    }
+    return includeDirs;
   }
 
   public static void markAsIncludeDirectory(@NotNull ContentEntry contentEntry, @NotNull VirtualFile directory) {

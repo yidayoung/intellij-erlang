@@ -1341,14 +1341,6 @@ public class ErlangPsiImplUtil {
         ErlangFile includedFile = getRelativeErlangFile(project, relativePath, includeDir);
         if (includedFile != null) return new SmartList<>(includedFile);
       }
-      ErlangFacet facet = module == null ? null : ErlangFacet.getFacet(module);
-      if (facet != null){
-        for (String includePath : facet.getConfiguration().getGlobalIncludes()) {
-          VirtualFile includeDir = LocalFileSystem.getInstance().findFileByPath(includePath);
-          ErlangFile includedFile = getRelativeErlangFile(project, relativePath, includeDir);
-          if (includedFile != null) return new SmartList<>(includedFile);
-        }
-      }
     }
 
     //TODO consider providing source roots functionality to small IDEs
