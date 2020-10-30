@@ -72,7 +72,6 @@ final class ImportedOtpApp {
         if (appsFile != null){
           myAppDirPath = appsFile.getPath();
           RebarConfigUtil.calcApps(appsFile, myApps);
-          myDeps.addAll(myApps);
         }
       }
       else {
@@ -94,14 +93,6 @@ final class ImportedOtpApp {
     return StringUtil.trimEnd(StringUtil.trimEnd(appConfig.getName(), ".src"), ".app");
   }
 
-  private static HashSet<VirtualFile> findAppFileFromEbin(VirtualFile ebinRoot) {
-    HashSet<VirtualFile> files = new HashSet<>();
-    for (VirtualFile file : ebinRoot.getChildren()) {
-      if (!file.isDirectory() && file.getName().endsWith("ebin")) files.add(file);
-    }
-    return files;
-  }
-
 
   @NotNull
   public String getName() {
@@ -116,6 +107,10 @@ final class ImportedOtpApp {
   @NotNull
   public Set<String> getDeps() {
     return myDeps;
+  }
+
+  public void addDeps(String dep){
+    myDeps.add(dep);
   }
 
   public Set<VirtualFile> getIncludePaths() {

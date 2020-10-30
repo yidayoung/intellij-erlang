@@ -28,6 +28,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.SystemIndependent;
 
 import java.io.File;
 import java.util.*;
@@ -56,10 +57,15 @@ public final class ErlangConsoleUtil {
     final Set<Module> codePathModules = new HashSet<>();
     if (module != null) {
       ModuleRootManager moduleRootMgr = ModuleRootManager.getInstance(module);
-      moduleRootMgr.orderEntries().recursively().forEachModule(dependencyModule -> {
-        codePathModules.add(dependencyModule);
-        return true;
-      });
+      if (isRootModule(moduleRootMgr)){
+        codePathModules.addAll(Arrays.asList(ModuleManager.getInstance(project).getModules()));
+      }
+      else {
+        moduleRootMgr.orderEntries().recursively().forEachModule(dependencyModule -> {
+          codePathModules.add(dependencyModule);
+          return true;
+        });
+      }
     }
     else {
       codePathModules.addAll(Arrays.asList(ModuleManager.getInstance(project).getModules()));
@@ -87,6 +93,15 @@ public final class ErlangConsoleUtil {
       }
     }
     return codePath;
+  }
+
+  private static boolean isRootModule(ModuleRootManager moduleRootMgr) {
+    @SystemIndependent String basePath = moduleRootMgr.getModifiableModel().getProject().getBasePath();
+    for (VirtualFile file : moduleRootMgr.getContentRoots()){{
+      if (file.getPath().equals(basePath))
+        return true;
+    }}
+    return false;
   }
 
   @Nullable
