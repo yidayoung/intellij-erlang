@@ -11,6 +11,7 @@ import static org.intellij.erlang.ErlangTypes.*;
 import org.intellij.erlang.stubs.ErlangFunctionStub;
 import org.intellij.erlang.psi.*;
 import com.intellij.navigation.ItemPresentation;
+import com.intellij.psi.search.SearchScope;
 import javax.swing.Icon;
 import com.intellij.psi.stubs.IStubElementType;
 
@@ -98,6 +99,12 @@ public class ErlangFunctionImpl extends ErlangNamedStubbedPsiElementBase<ErlangF
   @Nullable
   public ErlangSpecification findSpecification() {
     return ErlangPsiImplUtil.findSpecification(this);
+  }
+
+  @Override
+  @NotNull
+  public SearchScope getUseScope() {
+    return ErlangPsiImplUtil.getUseScope(this);
   }
 
 }

@@ -34,7 +34,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.*;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PatternCondition;
@@ -63,7 +62,6 @@ import org.intellij.erlang.completion.ErlangCompletionContributor;
 import org.intellij.erlang.completion.QuoteInsertHandler;
 import org.intellij.erlang.console.ErlangConsoleView;
 import org.intellij.erlang.debugger.xdebug.ErlangExprCodeFragment;
-import org.intellij.erlang.facet.ErlangFacet;
 import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.index.ErlangApplicationIndex;
 import org.intellij.erlang.index.ErlangModuleIndex;
@@ -1833,6 +1831,24 @@ public class ErlangPsiImplUtil {
       return new LocalSearchScope(function);
     }
     return ResolveScopeManager.getElementUseScope(o);
+  }
+
+  @NotNull
+  public static SearchScope getUseScope(@NotNull ErlangFunction o) {
+    return getNormalUseScope(o);
+  }
+  @NotNull
+  public static SearchScope getUseScope(@NotNull ErlangModule o) {
+    return getNormalUseScope(o);
+  }
+
+  private static SearchScope getNormalUseScope(@NotNull PsiElement o){
+    Module module = ModuleUtilCore.findModuleForPsiElement(o);
+    if (module != null){
+      return GlobalSearchScope.projectScope(o.getProject());
+    }
+    else
+      return GlobalSearchScope.allScope(o.getProject());
   }
 
   @NotNull

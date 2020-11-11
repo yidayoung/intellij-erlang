@@ -8,6 +8,7 @@ import com.intellij.psi.StubBasedPsiElement;
 import org.intellij.erlang.stubs.ErlangModuleStub;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.PsiScopeProcessor;
+import com.intellij.psi.search.SearchScope;
 
 public interface ErlangModule extends ErlangMetaAttribute, ErlangNamedElement, StubBasedPsiElement<ErlangModuleStub> {
 
@@ -41,5 +42,8 @@ public interface ErlangModule extends ErlangMetaAttribute, ErlangNamedElement, S
   int getTextOffset();
 
   boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place);
+
+  @NotNull
+  SearchScope getUseScope();
 
 }

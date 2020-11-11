@@ -74,7 +74,7 @@ public class ErlangModuleReferenceImpl extends ErlangQAtomBasedReferenceImpl {
   private GlobalSearchScope getSearchScope() {
     Project project = myElement.getProject();
     Module module = ModuleUtilCore.findModuleForPsiElement(myElement);
-    return module != null ? module.getModuleWithDependenciesAndLibrariesScope(true) :
+    return module != null ? GlobalSearchScope.projectScope(project) :
            new ProjectAndLibrariesScope(project);
   }
 

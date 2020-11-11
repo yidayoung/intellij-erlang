@@ -193,7 +193,7 @@ export_type_attribute ::= 'export_type' <<attribute_tail export_types>> {pin=1}
 import_directive ::= 'import' '(' module_ref ',' import_functions ')' {pin=1}
 module ::= 'module' '(' q_atom [',' module_tail] ')' {
   pin=1
-  methods = [getName setName getNameIdentifier getTextOffset processDeclarations]
+  methods = [getName setName getNameIdentifier getTextOffset processDeclarations getUseScope]
   stubClass="org.intellij.erlang.stubs.ErlangModuleStub"
 }
 private module_tail ::= model_field_list | argument_definition
@@ -318,6 +318,7 @@ function ::= function_clause (';' function_clause)* {
     getIcon
     isExported
     findSpecification
+    getUseScope
   ]
   stubClass="org.intellij.erlang.stubs.ErlangFunctionStub"
 }

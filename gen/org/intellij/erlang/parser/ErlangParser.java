@@ -56,7 +56,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   static boolean add_op(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "add_op")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_PLUS);
     if (!r) r = consumeToken(b, ERL_OP_MINUS);
     if (!r) r = consumeToken(b, ERL_BOR);
@@ -65,7 +64,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
     if (!r) r = consumeToken(b, ERL_BSR);
     if (!r) r = consumeToken(b, ERL_OR);
     if (!r) r = consumeToken(b, ERL_XOR);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -1020,10 +1018,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean behaviour_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "behaviour_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, "behaviour");
     if (!r) r = consumeToken(b, "behavior");
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -1450,7 +1446,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   static boolean comp_op(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "comp_op")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_EQ_EQ);
     if (!r) r = consumeToken(b, ERL_OP_DIV_EQ);
     if (!r) r = consumeToken(b, ERL_OP_EQ_LT);
@@ -1459,7 +1454,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
     if (!r) r = consumeToken(b, ERL_OP_GT);
     if (!r) r = consumeToken(b, ERL_OP_EQ_COL_EQ);
     if (!r) r = consumeToken(b, ERL_OP_EQ_DIV_EQ);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -1564,12 +1558,10 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean config_expr_recover_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "config_expr_recover_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_PAR_RIGHT);
     if (!r) r = consumeToken(b, ERL_BIN_END);
     if (!r) r = consumeToken(b, ERL_BRACKET_RIGHT);
     if (!r) r = consumeToken(b, ERL_CURLY_RIGHT);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -2351,7 +2343,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean form_recover_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "form_recover_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_PLUS);
     if (!r) r = consumeToken(b, ERL_OP_MINUS);
     if (!r) r = consumeToken(b, ERL_BIN_START);
@@ -2369,7 +2360,6 @@ public class ErlangParser implements PsiParser, LightPsiParser {
     if (!r) r = consumeToken(b, ERL_VAR);
     if (!r) r = consumeToken(b, ERL_RADIX);
     if (!r) r = consumeToken(b, ERL_DOT);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3003,11 +2993,9 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean ifdef_ifndef_undef_attribute_0_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "ifdef_ifndef_undef_attribute_0_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, "ifdef");
     if (!r) r = consumeToken(b, "ifndef");
     if (!r) r = consumeToken(b, "undef");
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3259,10 +3247,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean lc_expression_0_0_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "lc_expression_0_0_1")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_LT_MINUS);
     if (!r) r = consumeToken(b, ERL_OP_LT_EQ);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3572,10 +3558,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
     if (!recursion_guard_(b, l, "list_op")) return false;
     if (!nextTokenIs(b, "", ERL_OP_MINUS_MINUS, ERL_OP_PLUS_PLUS)) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_PLUS_PLUS);
     if (!r) r = consumeToken(b, ERL_OP_MINUS_MINUS);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3656,11 +3640,9 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean macros_body_0_1_0_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "macros_body_0_1_0_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_COMMA);
     if (!r) r = consumeToken(b, ERL_SEMI);
     if (!r) r = consumeToken(b, ERL_ARROW);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3861,10 +3843,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean map_entry_1_0_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "map_entry_1_0_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_ASSOC);
     if (!r) r = consumeToken(b, ERL_MATCH);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -3897,10 +3877,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean map_entry_type_0_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "map_entry_type_0_1")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_ASSOC);
     if (!r) r = consumeToken(b, ERL_MATCH);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -4164,14 +4142,12 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   static boolean mult_op(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "mult_op")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_AR_DIV);
     if (!r) r = consumeToken(b, ERL_OP_AR_MUL);
     if (!r) r = consumeToken(b, ERL_DIV);
     if (!r) r = consumeToken(b, ERL_REM);
     if (!r) r = consumeToken(b, ERL_BAND);
     if (!r) r = consumeToken(b, ERL_AND);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -4201,10 +4177,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean not_function_definition_1_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "not_function_definition_1_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_ARROW);
     if (!r) r = consumeToken(b, ERL_WHEN);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -4353,12 +4327,10 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   static boolean prefix_op(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "prefix_op")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_OP_PLUS);
     if (!r) r = consumeToken(b, ERL_OP_MINUS);
     if (!r) r = consumeToken(b, ERL_BNOT);
     if (!r) r = consumeToken(b, ERL_NOT);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -4505,10 +4477,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean record_field_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "record_field_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = q_atom(b, l + 1);
     if (!r) r = consumeToken(b, "_");
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -5231,10 +5201,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean tuple_recoverer_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "tuple_recoverer_0")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, ERL_CURLY_RIGHT);
     if (!r) r = consumeToken(b, ERL_COMMA);
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -5496,10 +5464,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean type_definition_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_definition_1")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeToken(b, "type");
     if (!r) r = consumeToken(b, "opaque");
-    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -6047,10 +6013,8 @@ public class ErlangParser implements PsiParser, LightPsiParser {
   private static boolean multiplicative_expression_0_1_0_0_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "multiplicative_expression_0_1_0_0_1")) return false;
     boolean r;
-    Marker m = enter_section_(b);
     r = consumeTokenSmart(b, ERL_COMMA);
     if (!r) r = consumeTokenSmart(b, ERL_BIN_END);
-    exit_section_(b, m, null, r);
     return r;
   }
 

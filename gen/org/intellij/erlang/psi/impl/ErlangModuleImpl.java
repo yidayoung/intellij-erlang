@@ -12,6 +12,7 @@ import org.intellij.erlang.stubs.ErlangModuleStub;
 import org.intellij.erlang.psi.*;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.PsiScopeProcessor;
+import com.intellij.psi.search.SearchScope;
 import com.intellij.psi.stubs.IStubElementType;
 
 public class ErlangModuleImpl extends ErlangNamedStubbedPsiElementBase<ErlangModuleStub> implements ErlangModule {
@@ -95,6 +96,12 @@ public class ErlangModuleImpl extends ErlangNamedStubbedPsiElementBase<ErlangMod
   @Override
   public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
     return ErlangPsiImplUtil.processDeclarations(this, processor, state, lastParent, place);
+  }
+
+  @Override
+  @NotNull
+  public SearchScope getUseScope() {
+    return ErlangPsiImplUtil.getUseScope(this);
   }
 
 }

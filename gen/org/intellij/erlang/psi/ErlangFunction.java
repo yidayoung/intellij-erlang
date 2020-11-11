@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.StubBasedPsiElement;
 import org.intellij.erlang.stubs.ErlangFunctionStub;
 import com.intellij.navigation.ItemPresentation;
+import com.intellij.psi.search.SearchScope;
 import javax.swing.Icon;
 
 public interface ErlangFunction extends ErlangNamedElement, StubBasedPsiElement<ErlangFunctionStub> {
@@ -41,5 +42,8 @@ public interface ErlangFunction extends ErlangNamedElement, StubBasedPsiElement<
 
   @Nullable
   ErlangSpecification findSpecification();
+
+  @NotNull
+  SearchScope getUseScope();
 
 }
