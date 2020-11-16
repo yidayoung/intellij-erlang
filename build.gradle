@@ -27,7 +27,11 @@ allprojects {
     sameSinceUntilBuild Boolean.valueOf(isEAP)
     alternativeIdePath localIdePath
   }
-  
+  patchPluginXml {
+    sinceBuild = '193'
+    untilBuild = '203'
+  }
+
   def compilationPackages = ['org/intellij/erlang/build/**', 'org/intellij/erlang/jps/**']
   
   test {

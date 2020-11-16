@@ -72,10 +72,7 @@ public class ErlangModuleReferenceImpl extends ErlangQAtomBasedReferenceImpl {
 
   @NotNull
   private GlobalSearchScope getSearchScope() {
-    Project project = myElement.getProject();
-    Module module = ModuleUtilCore.findModuleForPsiElement(myElement);
-    return module != null ? GlobalSearchScope.projectScope(project) :
-           new ProjectAndLibrariesScope(project);
+    return GlobalSearchScope.allScope(myElement.getProject());
   }
 
   private final class ModuleResolutionComparator implements Comparator<ErlangModule> {
