@@ -24,6 +24,7 @@ import com.intellij.openapi.command.CommandProcessor;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -33,13 +34,11 @@ import org.intellij.erlang.psi.impl.ErlangElementFactory;
 import org.intellij.erlang.types.ErlangExpressionType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
   public static final String NAME = "Generate spec";
-
+  private static final String ANY_TYPE_STRING = "any()";
   @NotNull
   @Override
   public String getFamilyName() {
@@ -73,7 +72,6 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
       ErlangFunType funType = PsiTreeUtil.findChildOfType(attr, ErlangFunType.class);
       Collection<ErlangType> types = PsiTreeUtil.findChildrenOfType(funType, ErlangType.class);
       for (ErlangType type : types) {
-        if (type instanceof ErlangTopType) continue;
         templateBuilder.replaceElement(type, type.getText());
       }
       templateBuilder.run(editor, false);
@@ -90,10 +88,8 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
   private static String computeArgsTypeSpecs(ErlangFunction function) {
     StringBuilder argTypes = new StringBuilder();
     int arity = function.getArity();
-    List<ErlangArgumentDefinition> argumentDefinitionList =
-      function.getFunctionClauseList().get(0).getArgumentDefinitionList().getArgumentDefinitionList();
     for (int i = 0; i < arity; i++) {
-      argTypes.append(getArgString(argumentDefinitionList.get(i), i));
+      argTypes.append(computeArgDesString(function, i)).append(", ");
     }
     if (arity != 0) {
       argTypes.setLength(argTypes.length() - 2);
@@ -101,38 +97,27 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
     return argTypes.toString();
   }
 
-  private static String getArgString(ErlangArgumentDefinition argumentDefinition, int index) {
-    ErlangExpression expression = argumentDefinition.getExpression();
+  private static String computeArgDesString(ErlangFunction function, int argumentIdx) {
+    List<ErlangExpression> argumentPatterns = getArgumentPatterns(function, argumentIdx);
+    if (argumentPatterns.isEmpty()) return ANY_TYPE_STRING;
+    HashSet<String> argTypes = new LinkedHashSet<>();
+    for (ErlangExpression expression:argumentPatterns){
+      if (expression instanceof ErlangAssignmentExpression)
+        expression = ((ErlangAssignmentExpression) expression).getLeft();
     ErlangExpressionType erlangExpressionType = ErlangExpressionType.create(expression);
-    String tail = getTypeString(erlangExpressionType).concat(", ");
-    String argName = getArgName(expression, index);
-    return argName + "::" + tail;
-  }
-
-  private static String getArgName(ErlangExpression expression) {
-    if (expression instanceof ErlangMaxExpression) return expression.getText();
-    if (expression instanceof ErlangAssignmentExpression){
-      ErlangExpression right = ((ErlangAssignmentExpression) expression).getRight();
-      return right != null ? right.getText() : "";
+      argTypes.add(getTypeString(erlangExpressionType));
     }
-    if (expression instanceof ErlangRecordExpression){
-      ErlangRecordRef recordRef = ((ErlangRecordExpression) expression).getRecordRef();
-      if (recordRef != null){
-        String text = recordRef.getText();
-        text = text.length() > 0 ? text.substring(0, 1).toUpperCase() + text.substring(1) : text;
-        return text;
-      }
-    }
-    return "";
-  }
-
-  public static String getArgName(ErlangExpression expression, int index){
-    String argName = getArgName(expression);
-    return argName.length() > 0 ? argName : String.format("X%d", index+1);
+    String typeString;
+    if (!argTypes.contains(ANY_TYPE_STRING))
+      typeString = StringUtil.join(argTypes, "|");
+    else
+      typeString = ANY_TYPE_STRING;
+    String argName = getArgName(argumentPatterns.get(0));
+    return argName != null ? argName + "::" + typeString : typeString;
   }
 
   public static String getTypeString(ErlangExpressionType t) {
-    return t == ErlangExpressionType.UNKNOWN ? "any()" : t.getName().toLowerCase() + "()";
+    return t == ErlangExpressionType.UNKNOWN ? ANY_TYPE_STRING : t.getName().toLowerCase() + "()";
   }
 
   public static ErlangExpressionType computeReturnType(ErlangFunction function) {
@@ -148,10 +133,39 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
     return computeCommonType(lastExpressions);
   }
 
+
+  private static List<ErlangExpression> getArgumentPatterns(ErlangFunction function, int argumentIdx) {
+    List<ErlangFunctionClause> clauses = function.getFunctionClauseList();
+    List<ErlangExpression> argumentPatterns = new ArrayList<>(clauses.size());
+    for (ErlangFunctionClause clause : clauses) {
+      ErlangArgumentDefinitionList argDefList = clause.getArgumentDefinitionList();
+      List<ErlangArgumentDefinition> clauseArgs = argDefList.getArgumentDefinitionList();
+      ErlangArgumentDefinition argDef = argumentIdx < clauseArgs.size() ? clauseArgs.get(argumentIdx) : null;
+      ContainerUtil.addIfNotNull(argumentPatterns, argDef != null ? argDef.getExpression() : null);
+    }
+    return argumentPatterns;
+  }
+
   private static ErlangExpressionType computeCommonType(List<ErlangExpression> expressions) {
     List<ErlangExpressionType> types = ContainerUtil.map(expressions, ErlangExpressionType::create);
     //TODO compute common type
     return types.isEmpty() ? ErlangExpressionType.UNKNOWN : types.get(0);
+  }
+
+  private static String getArgName(ErlangExpression expression) {
+    if (expression instanceof ErlangMaxExpression) return expression.getText();
+    if (expression instanceof ErlangAssignmentExpression){
+      ErlangExpression right = ((ErlangAssignmentExpression) expression).getRight();
+      return right != null ? right.getText() : "";
+    }
+    if (expression instanceof ErlangRecordExpression){
+      ErlangRecordRef recordRef = ((ErlangRecordExpression) expression).getRecordRef();
+      if (recordRef != null){
+        String RecordName = recordRef.getQAtom().getText();
+        return RecordName.length() > 0 ? RecordName.substring(0, 1).toUpperCase() + RecordName.substring(1) : null;
+      }
+    }
+    return null;
   }
 
 }

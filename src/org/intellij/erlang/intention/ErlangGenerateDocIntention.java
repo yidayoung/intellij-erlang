@@ -27,6 +27,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.util.IncorrectOperationException;
 import org.intellij.erlang.ErlangParserDefinition;
+import org.intellij.erlang.application.ErlangApplicationRunConfigurationType;
 import org.intellij.erlang.psi.*;
 import org.intellij.erlang.quickfixes.ErlangGenerateSpecFix;
 import org.intellij.erlang.types.ErlangExpressionType;
@@ -74,12 +75,12 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
       throw new IncorrectOperationException("Cursor should be placed on Erlang function.");
     }
     int textOffset = function.getTextOffset();
-    Template template = createErlangDocTemplate(project, function);
+    Template template = createErlangDocTemplate(project);
     editor.getCaretModel().moveToOffset(textOffset);
     TemplateManager.getInstance(project).startTemplate(editor, template);
   }
 
-  private static Template createErlangDocTemplate(Project project, ErlangFunction function) {
+  private static Template createErlangDocTemplate(Project project) {
     TemplateManager templateManager = TemplateManager.getInstance(project);
     Template template = templateManager.createTemplate("", "");
     template.setToReformat(true);
@@ -89,30 +90,7 @@ public class ErlangGenerateDocIntention extends ErlangBaseNamedElementIntention{
     template.addEndVariable();
     template.addTextSegment("\n%% @end\n" +
                   "%%------------------------------------------------------------------------------\n");
-    if (function.findSpecification() == null)
-      addSpec(template, function);
     return template;
-  }
-
-  private static void addSpec(Template template, ErlangFunction function) {
-    int arity = function.getArity();
-    List<ErlangArgumentDefinition> argumentDefinitionList =
-      function.getFunctionClauseList().get(0).getArgumentDefinitionList().getArgumentDefinitionList();
-    template.addTextSegment("-spec ");
-    template.addTextSegment(function.getName()+"(");
-    for (int i = 0; i < arity; i++) {
-      ErlangExpression expression = argumentDefinitionList.get(i).getExpression();
-      template.addTextSegment(ErlangGenerateSpecFix.getArgName(expression, i)+"::");
-      ErlangExpressionType erlangExpressionType = ErlangExpressionType.create(expression);
-      String typeString = ErlangGenerateSpecFix.getTypeString(erlangExpressionType);
-      template.addVariable(new ConstantNode(typeString), true);
-      if (i < arity - 1)
-        template.addTextSegment(", ");
-    }
-    template.addTextSegment(") -> ");
-    String typeString = ErlangGenerateSpecFix.getTypeString(ErlangGenerateSpecFix.computeReturnType(function));
-    template.addVariable(new ConstantNode(typeString), true);
-    template.addTextSegment(".\n");
   }
 
   @Nullable
