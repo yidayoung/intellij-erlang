@@ -40,7 +40,8 @@ process_message({interpret_modules, NewModules},
                 #state{remote_need_interprete_modules = Modules} = State) when is_list(NewModules) ->
   LeftModules = interpret_modules(NewModules++Modules, State#state.remote_node),
   State#state{remote_need_interprete_modules = LeftModules};
-process_message({evaluate, Pid, Expression, MaybeStackPointer}, #state{remote_node = Node}=State) when is_pid(Pid), is_list(Expression) ->
+process_message({evaluate, PidString, Expression, MaybeStackPointer}, #state{remote_node = Node}=State) when is_list(PidString), is_list(Expression) ->
+  Pid = erlang:list_to_pid(PidString),
   case is_top_stack(Pid, MaybeStackPointer) of
     true ->
       evaluate(Pid, Expression, MaybeStackPointer);
@@ -72,14 +73,14 @@ process_message({run_debugger, Module, Function, Args}) when is_atom(Module),
                                                              is_atom(Function),
                                                              is_list(Args) ->
   run_debugger(Module, Function, Args);
-process_message({step_into, Pid}) when is_pid(Pid) ->
-  step_into(Pid);
-process_message({step_over, Pid}) when is_pid(Pid) ->
-  step_over(Pid);
-process_message({step_out, Pid}) when is_pid(Pid) ->
-  step_out(Pid);
-process_message({continue, Pid}) when is_pid(Pid) ->
-  continue(Pid);
+process_message({step_into, PidString}) when is_list(PidString) ->
+  step_into(erlang:list_to_pid(PidString));
+process_message({step_over, PidString}) when is_list(PidString) ->
+  step_over(erlang:list_to_pid(PidString));
+process_message({step_out, PidString}) when is_list(PidString) ->
+  step_out(erlang:list_to_pid(PidString));
+process_message({continue, PidString}) when is_list(PidString) ->
+  continue(erlang:list_to_pid(PidString));
 % responses from interpreter
 process_message({_Meta, {eval_rsp, EvalResponse}}) ->
   evaluate_response(EvalResponse);

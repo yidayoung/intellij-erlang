@@ -30,6 +30,11 @@ public final class ErlangDebuggerCommandsProducer {
   }
 
   @NotNull
+  private static String PidToErlangString(OtpErlangPid pid) {
+    return "<" + pid.serial() + "." + pid.id() + "." + pid.creation() + ">";
+  }
+
+  @NotNull
   public static ErlangDebuggerCommand getSetBreakpointCommand(@NotNull String module,
                                                               int line,
                                                               String conditionExpression) {
@@ -149,7 +154,9 @@ public final class ErlangDebuggerCommandsProducer {
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
-      return new OtpErlangTuple(new OtpErlangObject[]{new OtpErlangAtom(myName), myPid});
+      String PidString = PidToErlangString(myPid);
+      return new OtpErlangTuple(new OtpErlangObject[]{new OtpErlangAtom(myName),
+                                                      new OtpErlangString(PidString)});
     }
   }
 
@@ -256,9 +263,10 @@ public final class ErlangDebuggerCommandsProducer {
     @NotNull
     @Override
     public OtpErlangTuple toMessage() {
+      String PidString = PidToErlangString(myPid);
       return new OtpErlangTuple(new OtpErlangObject[]{
         new OtpErlangAtom("evaluate"),
-        myPid,
+        new OtpErlangString(PidString),
         new OtpErlangList(myExpression),
         new OtpErlangInt(myStackPointer),
 

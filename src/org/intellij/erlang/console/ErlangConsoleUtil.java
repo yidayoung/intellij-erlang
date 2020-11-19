@@ -57,7 +57,7 @@ public final class ErlangConsoleUtil {
     final Set<Module> codePathModules = new HashSet<>();
     if (module != null) {
       ModuleRootManager moduleRootMgr = ModuleRootManager.getInstance(module);
-      if (isRootModule(moduleRootMgr)){
+      if (isRootModule(moduleRootMgr, project.getBasePath())){
         codePathModules.addAll(Arrays.asList(ModuleManager.getInstance(project).getModules()));
       }
       else {
@@ -95,8 +95,9 @@ public final class ErlangConsoleUtil {
     return codePath;
   }
 
-  private static boolean isRootModule(ModuleRootManager moduleRootMgr) {
-    @SystemIndependent String basePath = moduleRootMgr.getModifiableModel().getProject().getBasePath();
+  private static boolean isRootModule(ModuleRootManager moduleRootMgr,
+                                      @Nullable String basePath) {
+    if (basePath == null) return false;
     for (VirtualFile file : moduleRootMgr.getContentRoots()){{
       if (file.getPath().equals(basePath))
         return true;
