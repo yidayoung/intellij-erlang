@@ -163,7 +163,7 @@ public final class ErlangTermFileUtil {
     if (!(element instanceof ErlangTupleExpression)) return "";
     ErlangTupleExpression tupleExpression = (ErlangTupleExpression) element;
     List<ErlangExpression> expressionList = tupleExpression.getExpressionList();
-    StringBuilder sb = new StringBuilder(element.getText());
+    StringBuilder sb = new StringBuilder("{");
     int varCount = 0;
     for (ErlangExpression expression : expressionList){
       PsiElement child = expression;
@@ -172,14 +172,15 @@ public final class ErlangTermFileUtil {
         child = expression.getFirstChild();
         maxLevel--;
       }
-      if (child instanceof ErlangQAtom)
+      if (child instanceof ErlangQAtom) {
+        sb.append(child.getText()).append(",");
         continue;
-      String text = expression.getText();
-      int startOffsetInParent = expression.getStartOffsetInParent();
-      sb.replace(startOffsetInParent, startOffsetInParent + text.length(), "$"+getVarName(varCount)+"$");
+      }
+      sb.append(getVarName(varCount)).append(",");
       varCount++;
     }
-
+    if (!expressionList.isEmpty()) sb.setLength(sb.length()-1);
+    sb.append("}");
     return StringUtil.trim(sb.toString());
   }
 
