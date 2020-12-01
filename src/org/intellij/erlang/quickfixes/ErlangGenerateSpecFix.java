@@ -72,6 +72,7 @@ public class ErlangGenerateSpecFix extends ErlangQuickFixBase {
       ErlangFunType funType = PsiTreeUtil.findChildOfType(attr, ErlangFunType.class);
       Collection<ErlangType> types = PsiTreeUtil.findChildrenOfType(funType, ErlangType.class);
       for (ErlangType type : types) {
+        if (type instanceof ErlangTopType) continue;
         templateBuilder.replaceElement(type, type.getText());
       }
       templateBuilder.run(editor, false);

@@ -31,7 +31,7 @@ public final class ErlangDebuggerCommandsProducer {
 
   @NotNull
   private static String PidToErlangString(OtpErlangPid pid) {
-    return "<" + pid.serial() + "." + pid.id() + "." + pid.creation() + ">";
+    return "<" + pid.serial() + "." + pid.id() + ".0>";
   }
 
   @NotNull
