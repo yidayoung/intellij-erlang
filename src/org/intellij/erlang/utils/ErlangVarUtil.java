@@ -95,8 +95,27 @@ public class ErlangVarUtil {
 
   @Nullable
   public static String getMapsVarNameAfter(ErlangMapExpression atomMapExpression){
-    ErlangExpression expression = PsiTreeUtil.getChildOfType(atomMapExpression.getParent(), ErlangMaxExpression.class);
-    return expression != null ? expression.getText(): null;
+    ErlangAssignmentExpression assignmentExpression = PsiTreeUtil.getParentOfType(atomMapExpression, ErlangAssignmentExpression.class);
+    ErlangExpression right = assignmentExpression != null ? assignmentExpression.getRight() : null;
+    return getMapsVarName(right);
+  }
+
+  @Nullable
+  public static String getMapsVarName(ErlangExpression right) {
+    while (right instanceof ErlangAssignmentExpression){
+      right = ((ErlangAssignmentExpression) right).getLeft();
+    }
+    if (right instanceof ErlangMaxExpression) return right.getText();
+    String functionName = "";
+    if (right instanceof ErlangGlobalFunctionCallExpression){
+      functionName = ((ErlangGlobalFunctionCallExpression) right).getFunctionCallExpression().getNameIdentifier().getText();
+    }
+    if (right instanceof ErlangFunctionCallExpression){
+      functionName = ((ErlangFunctionCallExpression) right).getNameIdentifier().getText();
+    }
+    if (functionName.startsWith("get_"))
+      return makeErlangVarName(functionName.substring(4));
+    return null;
   }
 
   @Nullable

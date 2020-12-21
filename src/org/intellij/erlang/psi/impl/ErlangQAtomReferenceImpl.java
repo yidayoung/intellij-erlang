@@ -81,8 +81,9 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
     }
     List<ErlangExpression> expressionList = argumentList.getExpressionList();
     if (expressionList.size() >= 2) {
-      String varName = expressionList.get(1).getText();
-          return getResolve(myElement.getProject(), varName);
+      String varName = ErlangVarUtil.getMapsVarName(expressionList.get(1));
+      if (varName != null)
+        return getResolve(myElement.getProject(), varName);
     }
     return null;
   }
