@@ -17,22 +17,25 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangBitstr;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.ImmediateFullValueEvaluator;
 import com.intellij.xdebugger.frame.XValueChildrenList;
 import com.intellij.xdebugger.frame.XValueNode;
 import com.intellij.xdebugger.frame.XValuePlace;
 import com.intellij.xdebugger.frame.presentation.XValuePresentation;
+import org.intellij.erlang.debugger.xdebug.ErlangSourcePosition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 class ErlangBitStringXValue extends ErlangArrayXValueBase<OtpErlangBitstr> {
-  public ErlangBitStringXValue(OtpErlangBitstr value) {
-    super(value, value.binaryValue().length);
+  public ErlangBitStringXValue(OtpErlangBitstr value,
+                               String name, XDebugSession session) {
+    super(value, name, value.binaryValue().length, session);
   }
 
   @Override
   protected void computeChild(XValueChildrenList children, int childIdx) {
-    addIndexedChild(children, getValue().binaryValue()[childIdx], childIdx);
+    addIndexedChild(children, getValue().binaryValue()[childIdx], childIdx, getSession());
   }
 
   @Nullable

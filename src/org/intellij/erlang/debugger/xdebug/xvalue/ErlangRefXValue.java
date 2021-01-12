@@ -17,22 +17,25 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangRef;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XValueChildrenList;
+import org.intellij.erlang.debugger.xdebug.ErlangSourcePosition;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ErlangRefXValue extends ErlangXValueBase<OtpErlangRef> {
-  public ErlangRefXValue(OtpErlangRef value) {
-    super(value, 1 + value.ids().length);
+  public ErlangRefXValue(OtpErlangRef value, String name, XDebugSession session) {
+    super(value, name, 1 + value.ids().length, session);
   }
 
   @Override
   public void computeChildren(@NotNull XCompositeNode node) {
     int[] ids = getValue().ids();
     XValueChildrenList children = new XValueChildrenList(1 + ids.length);
-    addNamedChild(children, getValue().node(), "node");
+    addNamedChild(children, getValue().node(), "node", getSession());
     for (int i = 0; i < ids.length; i++) {
-      addNamedChild(children, ids[i], "id" + i);
+      addNamedChild(children, ids[i], "id" + i, getSession());
     }
     node.addChildren(children, true);
   }

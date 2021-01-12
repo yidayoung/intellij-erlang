@@ -17,43 +17,45 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.*;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XValue;
+import org.intellij.erlang.debugger.node.ErlangVariableBinding;
 
 public final class ErlangXValueFactory {
   private ErlangXValueFactory() {
   }
 
-  public static XValue create(OtpErlangObject object) {
+  public static XValue create(OtpErlangObject object, String name, XDebugSession session) {
     if (object instanceof OtpErlangLong || object instanceof OtpErlangDouble) {
-      return new ErlangNumericXValue(object);
+      return new ErlangNumericXValue(object, name, session);
     }
     if (object instanceof OtpErlangAtom) {
-      return new ErlangAtomXValue((OtpErlangAtom) object);
+      return new ErlangAtomXValue((OtpErlangAtom) object, name, session);
     }
     if (object instanceof OtpErlangPid) {
-      return new ErlangPidXValue((OtpErlangPid) object);
+      return new ErlangPidXValue((OtpErlangPid) object, name, session);
     }
     if (object instanceof OtpErlangPort) {
-      return new ErlangPortXValue((OtpErlangPort) object);
+      return new ErlangPortXValue((OtpErlangPort) object, name, session);
     }
     if (object instanceof OtpErlangRef) {
-      return new ErlangRefXValue((OtpErlangRef) object);
+      return new ErlangRefXValue((OtpErlangRef) object, name, session);
     }
     if (object instanceof OtpErlangTuple) {
-      return new ErlangTupleXValue((OtpErlangTuple) object);
+      return new ErlangTupleXValue((OtpErlangTuple) object, name, session);
     }
     if (object instanceof OtpErlangString) {
-      return new ErlangStringXValue((OtpErlangString) object);
+      return new ErlangStringXValue((OtpErlangString) object, name, session);
     }
     if (object instanceof OtpErlangList) {
-      return new ErlangListXValue((OtpErlangList) object);
+      return new ErlangListXValue((OtpErlangList) object, name, session);
     }
     if (object instanceof OtpErlangBitstr) {
-      return new ErlangBitStringXValue((OtpErlangBitstr) object);
+      return new ErlangBitStringXValue((OtpErlangBitstr) object, name, session);
     }
     if (object instanceof OtpErlangMap) {
-      return new ErlangMapXValue((OtpErlangMap) object);
+      return new ErlangMapXValue((OtpErlangMap) object, name, session);
     }
-    return new ErlangPrimitiveXValueBase<>(object);
+    return new ErlangPrimitiveXValueBase<>(object, name, session);
   }
 }

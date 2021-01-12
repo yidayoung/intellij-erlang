@@ -18,17 +18,18 @@ package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangMap;
 import com.ericsson.otp.erlang.OtpErlangObject;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XValueChildrenList;
 
 public class ErlangMapXValue extends ErlangArrayXValueBase<OtpErlangMap> {
-  public ErlangMapXValue(OtpErlangMap value) {
-    super(value, value.arity());
+  public ErlangMapXValue(OtpErlangMap value, String name, XDebugSession session) {
+    super(value, name, value.arity(), session);
   }
 
   @Override
   protected void computeChild(XValueChildrenList children, int childIdx) {
     OtpErlangObject key = getValue().keys()[childIdx];
     OtpErlangObject value = getValue().get(key);
-    addIndexedChild(children, new ErlangMappingXValue(key, value), childIdx);
+    addIndexedChild(children, new ErlangMappingXValue(key, value, getName(), getSession()), childIdx);
   }
 }

@@ -143,7 +143,7 @@ public class ErlangXDebugProcess extends XDebugProcess implements ErlangDebugger
   public synchronized void handleEvaluationResponse(OtpErlangObject response) {
     XDebuggerEvaluator.XEvaluationCallback callback = myCallbackQueue.poll();
     if (callback != null) {
-      callback.evaluated(ErlangXValueFactory.create(response));
+      callback.evaluated(ErlangXValueFactory.create(response, "", mySession));
     }
   }
 

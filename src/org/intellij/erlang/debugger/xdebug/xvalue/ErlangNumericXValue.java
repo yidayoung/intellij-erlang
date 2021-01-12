@@ -17,16 +17,19 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangObject;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XValueNode;
 import com.intellij.xdebugger.frame.XValuePlace;
 import com.intellij.xdebugger.frame.presentation.XNumericValuePresentation;
 import com.intellij.xdebugger.frame.presentation.XValuePresentation;
+import org.intellij.erlang.debugger.xdebug.ErlangSourcePosition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 class ErlangNumericXValue extends ErlangPrimitiveXValueBase<OtpErlangObject> {
-  public ErlangNumericXValue(OtpErlangObject value) {
-    super(value);
+  public ErlangNumericXValue(OtpErlangObject value,
+                             String name, XDebugSession session) {
+    super(value, name, session);
   }
 
   @Nullable

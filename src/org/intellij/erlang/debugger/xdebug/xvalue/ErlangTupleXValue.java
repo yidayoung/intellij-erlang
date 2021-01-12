@@ -17,15 +17,19 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangTuple;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XValueChildrenList;
+import org.intellij.erlang.debugger.xdebug.ErlangSourcePosition;
+import org.jetbrains.annotations.Nullable;
 
 class ErlangTupleXValue extends ErlangArrayXValueBase<OtpErlangTuple> {
-  public ErlangTupleXValue(OtpErlangTuple value) {
-    super(value, value.arity());
+  public ErlangTupleXValue(OtpErlangTuple value,
+                           String name, XDebugSession session) {
+    super(value, name, value.arity(), session);
   }
 
   @Override
   protected void computeChild(XValueChildrenList children, int childIdx) {
-    addIndexedChild(children, getValue().elementAt(childIdx), childIdx);
+    addIndexedChild(children, getValue().elementAt(childIdx), childIdx, getSession());
   }
 }

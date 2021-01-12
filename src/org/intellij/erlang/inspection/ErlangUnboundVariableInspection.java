@@ -30,6 +30,7 @@ import com.intellij.psi.util.PsiUtilBase;
 import org.intellij.erlang.psi.ErlangClauseBody;
 import org.intellij.erlang.psi.ErlangQVar;
 import org.intellij.erlang.psi.ErlangVisitor;
+import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.intellij.erlang.quickfixes.ErlangQuickFixBase;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,7 +47,7 @@ public class ErlangUnboundVariableInspection extends ErlangInspectionBase {
           || inDefinitionBeforeArgumentList(o)
           || inLeftPartOfAssignment(o) || inAtomAttribute(o)
           || isForceSkipped(o) || inSpecification(o) || inDefine(o)
-          || inCallback(o) || inRecordDefinition(o))  {
+          || inCallback(o) || inRecordDefinition(o) || inConsoleFile(o))  {
           return;
         }
 

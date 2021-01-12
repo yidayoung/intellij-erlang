@@ -19,30 +19,64 @@ package org.intellij.erlang.debugger.xdebug.xvalue;
 import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangLong;
 import com.ericsson.otp.erlang.OtpErlangObject;
+import com.intellij.debugger.SourcePosition;
+import com.intellij.debugger.impl.DebuggerUtilsEx;
+import com.intellij.openapi.fileEditor.FileEditor;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
+import com.intellij.xdebugger.XDebugSession;
+import com.intellij.xdebugger.XExpression;
+import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.frame.*;
 import com.intellij.xdebugger.frame.presentation.XValuePresentation;
+import com.intellij.xdebugger.impl.XSourcePositionImpl;
+import com.intellij.xdebugger.impl.frame.XValueWithInlinePresentation;
+import com.sun.tools.javadoc.SourcePositionImpl;
 import org.intellij.erlang.icons.ErlangIcons;
+import org.intellij.erlang.psi.ErlangFile;
+import org.intellij.erlang.psi.ErlangFunClause;
+import org.intellij.erlang.psi.ErlangFunctionClause;
+import org.intellij.erlang.psi.ErlangQVar;
+import org.intellij.erlang.psi.impl.ResolveUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.concurrency.Promise;
 
 import javax.swing.*;
 
-class ErlangXValueBase<T extends OtpErlangObject> extends XValue {
+class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XValueWithInlinePresentation {
   private final T myValue;
   private final int myChildrenCount;
+  private final String myname;
   private int myNextChildIdxToCompute;
+  private final XDebugSession mySession;
 
-  protected ErlangXValueBase(T value) {
-    this(value, 0);
+  protected ErlangXValueBase(T value, String name, XDebugSession session) {
+    this(value, name, 0, session);
   }
 
-  protected ErlangXValueBase(T value, int childrenCount) {
+  protected ErlangXValueBase(T value, String name, int childrenCount, XDebugSession session) {
     myValue = value;
     myChildrenCount = childrenCount;
+    mySession = session;
+    myname = name;
   }
 
   protected T getValue() {
     return myValue;
+  }
+
+  public XDebugSession getSession() {
+    return mySession;
+  }
+
+  public String getName() {
+    return myname;
   }
 
   @Override
@@ -76,9 +110,35 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue {
     }
   }
 
+
   @Override
-  public boolean canNavigateToSource() {
-    return false;
+  public void computeSourcePosition(@NotNull XNavigatable xNavigatable) {
+    XSourcePosition position = mySession.getCurrentPosition();
+    if (position == null) return;
+    VirtualFile file = position.getFile();
+    Project project = mySession.getProject();
+    PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
+    FileEditor editor = FileEditorManager.getInstance(project).getSelectedEditor(file);
+    if (psiFile != null && editor instanceof TextEditor){
+      PsiElement element = psiFile.findElementAt(((TextEditor) editor).getEditor().getDocument().getLineStartOffset(position.getLine()));
+      ResolveUtil.treeWalkUp(element, (e, state) -> {
+        if (e instanceof ErlangQVar && e.getText().equals(myname)) {
+          SourcePosition position1 = SourcePosition.createFromElement(e);
+          // @todo show only in Assignment
+          xNavigatable.setSourcePosition(DebuggerUtilsEx.toXSourcePosition(position1));
+          return false;
+        }
+        if (e instanceof ErlangFunctionClause || e instanceof ErlangFile)
+          return false;
+        return true;
+      });
+    }
+  }
+
+  @NotNull
+  @Override
+  public Promise<XExpression> calculateEvaluationExpression() {
+    return super.calculateEvaluationExpression();
   }
 
   protected void computeChild(XValueChildrenList children, int childIdx) {
@@ -107,38 +167,44 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue {
     return myChildrenCount != 0;
   }
 
-  protected static void addIndexedChild(XValueChildrenList childrenList, long numericChild, int childIdx) {
-    addIndexedChild(childrenList, new OtpErlangLong(numericChild), childIdx);
+  protected void addIndexedChild(XValueChildrenList childrenList, long numericChild, int childIdx, XDebugSession session) {
+    addIndexedChild(childrenList, new OtpErlangLong(numericChild), childIdx, session);
   }
 
-  protected static void addIndexedChild(XValueChildrenList childrenList, OtpErlangObject child, int childIdx) {
-    addIndexedChild(childrenList, ErlangXValueFactory.create(child), childIdx);
+  protected void addIndexedChild(XValueChildrenList childrenList, OtpErlangObject child, int childIdx, XDebugSession session) {
+    addIndexedChild(childrenList, ErlangXValueFactory.create(child, myname, session), childIdx);
   }
 
   protected static void addIndexedChild(XValueChildrenList childrenList, XValue child, int childIdx) {
     addNamedChild(childrenList, child, "[" + (childIdx + 1) + "]");
   }
 
-  protected static void addNamedChild(XValueChildrenList childrenList, long numericChild, String name) {
-    addNamedChild(childrenList, new OtpErlangLong(numericChild), name);
+  protected void addNamedChild(XValueChildrenList childrenList, long numericChild, String name, XDebugSession session) {
+    addNamedChild(childrenList, new OtpErlangLong(numericChild), name, session);
   }
 
-  protected static void addNamedChild(XValueChildrenList childrenList, String atomicChild, String name) {
-    addNamedChild(childrenList, new OtpErlangAtom(atomicChild), name);
+  protected void addNamedChild(XValueChildrenList childrenList, String atomicChild, String name, XDebugSession session) {
+    addNamedChild(childrenList, new OtpErlangAtom(atomicChild), name, session);
   }
 
-  protected static void addNamedChild(XValueChildrenList childrenList, OtpErlangObject child, String name) {
-    addNamedChild(childrenList, ErlangXValueFactory.create(child), name);
+  protected void addNamedChild(XValueChildrenList childrenList, OtpErlangObject child, String name, XDebugSession session) {
+    addNamedChild(childrenList, ErlangXValueFactory.create(child, myname, session), name);
   }
 
   private static void addNamedChild(XValueChildrenList childrenList, XValue child, String name) {
     childrenList.add(name, child);
   }
+
+  @Nullable
+  @Override
+  public String computeInlinePresentation() {
+    return getStringRepr();
+  }
 }
 
 class ErlangPrimitiveXValueBase<T extends OtpErlangObject> extends ErlangXValueBase<T> {
-  public ErlangPrimitiveXValueBase(T value) {
-    super(value);
+  public ErlangPrimitiveXValueBase(T value, String name, XDebugSession session) {
+    super(value, name, session);
   }
 
   @Override
@@ -148,8 +214,8 @@ class ErlangPrimitiveXValueBase<T extends OtpErlangObject> extends ErlangXValueB
 }
 
 class ErlangArrayXValueBase<T extends OtpErlangObject> extends ErlangXValueBase<T> {
-  protected ErlangArrayXValueBase(T value, int childrenCount) {
-    super(value, childrenCount);
+  protected ErlangArrayXValueBase(T value, String name, int childrenCount, XDebugSession session) {
+    super(value, name, childrenCount, session);
   }
 
   @Override

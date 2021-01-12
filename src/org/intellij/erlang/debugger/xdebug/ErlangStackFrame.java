@@ -100,12 +100,12 @@ public class ErlangStackFrame extends XStackFrame {
   public void computeChildren(@NotNull XCompositeNode node) {
     XValueChildrenList myVariables = new XValueChildrenList(myTraceElement.getBindings().size());
     for (ErlangVariableBinding binding : myTraceElement.getBindings()) {
-      myVariables.add(binding.getName(), getVariableValue(binding.getValue()));
+      myVariables.add(binding.getName(), getVariableValue(binding));
     }
     node.addChildren(myVariables, true);
   }
 
-  private static XValue getVariableValue(OtpErlangObject value) {
-    return ErlangXValueFactory.create(value);
+  private XValue getVariableValue(ErlangVariableBinding value) {
+    return ErlangXValueFactory.create(value.getValue(), value.getName(), myDebugProcess.getSession());
   }
 }

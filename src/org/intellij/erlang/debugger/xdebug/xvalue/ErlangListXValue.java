@@ -17,15 +17,18 @@
 package org.intellij.erlang.debugger.xdebug.xvalue;
 
 import com.ericsson.otp.erlang.OtpErlangList;
+import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.frame.XValueChildrenList;
+import org.intellij.erlang.debugger.xdebug.ErlangSourcePosition;
+import org.jetbrains.annotations.Nullable;
 
 class ErlangListXValue extends ErlangArrayXValueBase<OtpErlangList> {
-  public ErlangListXValue(OtpErlangList value) {
-    super(value, value.arity());
+  public ErlangListXValue(OtpErlangList value, String name, XDebugSession session) {
+    super(value, name, value.arity(), session);
   }
 
   @Override
   protected void computeChild(XValueChildrenList children, int childIdx) {
-    addIndexedChild(children, getValue().elementAt(childIdx), childIdx);
+    addIndexedChild(children, getValue().elementAt(childIdx), childIdx, getSession());
   }
 }
