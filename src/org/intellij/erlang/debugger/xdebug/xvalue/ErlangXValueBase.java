@@ -29,19 +29,15 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.util.ThreeState;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XExpression;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.frame.*;
 import com.intellij.xdebugger.frame.presentation.XValuePresentation;
-import com.intellij.xdebugger.impl.XSourcePositionImpl;
-import com.intellij.xdebugger.impl.frame.XValueWithInlinePresentation;
-import com.sun.tools.javadoc.SourcePositionImpl;
 import org.intellij.erlang.icons.ErlangIcons;
-import org.intellij.erlang.psi.ErlangFile;
-import org.intellij.erlang.psi.ErlangFunClause;
-import org.intellij.erlang.psi.ErlangFunctionClause;
-import org.intellij.erlang.psi.ErlangQVar;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ResolveUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,10 +45,10 @@ import org.jetbrains.concurrency.Promise;
 
 import javax.swing.*;
 
-class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XValueWithInlinePresentation {
+class ErlangXValueBase<T extends OtpErlangObject> extends XValue {
   private final T myValue;
   private final int myChildrenCount;
-  private final String myname;
+  private final String myName;
   private int myNextChildIdxToCompute;
   private final XDebugSession mySession;
 
@@ -64,7 +60,7 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XVal
     myValue = value;
     myChildrenCount = childrenCount;
     mySession = session;
-    myname = name;
+    myName = name;
   }
 
   protected T getValue() {
@@ -76,7 +72,7 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XVal
   }
 
   public String getName() {
-    return myname;
+    return myName;
   }
 
   @Override
@@ -122,17 +118,26 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XVal
     if (psiFile != null && editor instanceof TextEditor){
       PsiElement element = psiFile.findElementAt(((TextEditor) editor).getEditor().getDocument().getLineStartOffset(position.getLine()));
       ResolveUtil.treeWalkUp(element, (e, state) -> {
-        if (e instanceof ErlangQVar && e.getText().equals(myname)) {
-          SourcePosition position1 = SourcePosition.createFromElement(e);
-          // @todo show only in Assignment
-          xNavigatable.setSourcePosition(DebuggerUtilsEx.toXSourcePosition(position1));
-          return false;
+        if (e instanceof ErlangQVar && e.getText().equals(myName)) {
+          PsiElement parent = e.getParent().getParent();
+          if (PsiTreeUtil.instanceOf(parent, ErlangAssignmentExpression.class, ErlangArgumentDefinition.class)) {
+            SourcePosition position1 = SourcePosition.createFromElement(parent);
+            xNavigatable.setSourcePosition(DebuggerUtilsEx.toXSourcePosition(position1));
+            return false;
+          }
         }
         if (e instanceof ErlangFunctionClause || e instanceof ErlangFile)
           return false;
         return true;
       });
     }
+  }
+
+  @NotNull
+  @Override
+  public ThreeState computeInlineDebuggerData(@NotNull XInlineDebuggerDataCallback callback) {
+    computeSourcePosition(callback::computed);
+    return ThreeState.YES;
   }
 
   @NotNull
@@ -172,7 +177,7 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XVal
   }
 
   protected void addIndexedChild(XValueChildrenList childrenList, OtpErlangObject child, int childIdx, XDebugSession session) {
-    addIndexedChild(childrenList, ErlangXValueFactory.create(child, myname, session), childIdx);
+    addIndexedChild(childrenList, ErlangXValueFactory.create(child, myName, session), childIdx);
   }
 
   protected static void addIndexedChild(XValueChildrenList childrenList, XValue child, int childIdx) {
@@ -188,17 +193,11 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue implements XVal
   }
 
   protected void addNamedChild(XValueChildrenList childrenList, OtpErlangObject child, String name, XDebugSession session) {
-    addNamedChild(childrenList, ErlangXValueFactory.create(child, myname, session), name);
+    addNamedChild(childrenList, ErlangXValueFactory.create(child, myName, session), name);
   }
 
   private static void addNamedChild(XValueChildrenList childrenList, XValue child, String name) {
     childrenList.add(name, child);
-  }
-
-  @Nullable
-  @Override
-  public String computeInlinePresentation() {
-    return getStringRepr();
   }
 }
 

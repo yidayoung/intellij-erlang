@@ -16,12 +16,19 @@
 
 package org.intellij.erlang.debugger.xdebug;
 
-import com.ericsson.otp.erlang.OtpErlangObject;
+import com.intellij.debugger.impl.DebuggerUtilsEx;
 import com.intellij.icons.AllIcons;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.project.IndexNotReadyException;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.ColoredTextContainer;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.xdebugger.XSourcePosition;
+import com.intellij.xdebugger.evaluation.ExpressionInfo;
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XStackFrame;
@@ -30,9 +37,7 @@ import com.intellij.xdebugger.frame.XValueChildrenList;
 import org.intellij.erlang.debugger.node.ErlangTraceElement;
 import org.intellij.erlang.debugger.node.ErlangVariableBinding;
 import org.intellij.erlang.debugger.xdebug.xvalue.ErlangXValueFactory;
-import org.intellij.erlang.psi.ErlangFile;
-import org.intellij.erlang.psi.ErlangFunExpression;
-import org.intellij.erlang.psi.ErlangFunction;
+import org.intellij.erlang.psi.*;
 import org.intellij.erlang.psi.impl.ErlangPsiImplUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +69,31 @@ public class ErlangStackFrame extends XStackFrame {
                            @NotNull XEvaluationCallback callback,
                            @Nullable XSourcePosition expressionPosition) {
         myDebugProcess.evaluateExpression(expression, callback, myTraceElement, expressionPosition);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionInfo getExpressionInfoAtOffset(@NotNull Project project,
+                                                      @NotNull Document document,
+                                                      int offset,
+                                                      boolean sideEffectsAllowed) {
+
+        return PsiDocumentManager.getInstance(project).commitAndRunReadAction(() -> {
+          try {
+            PsiElement elementAtCursor = DebuggerUtilsEx.findElementAt(PsiDocumentManager.getInstance(project).getPsiFile(document), offset);
+            if (elementAtCursor == null || !elementAtCursor.isValid()) {
+              return null;
+            }
+            if (!(elementAtCursor instanceof ErlangQVar)){
+              elementAtCursor = PsiTreeUtil.getParentOfType(elementAtCursor, ErlangExpression.class);
+              if (elementAtCursor instanceof ErlangFunctionCallExpression && elementAtCursor.getParent() instanceof ErlangGlobalFunctionCallExpression)
+                elementAtCursor = elementAtCursor.getParent();
+            }
+            if (elementAtCursor == null) return null;
+            return new ExpressionInfo(elementAtCursor.getTextRange(), elementAtCursor.getText());
+          } catch (IndexNotReadyException ignored) {}
+          return null;
+        });
       }
     };
   }
