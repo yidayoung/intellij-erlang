@@ -13,12 +13,13 @@ cache:
   - $HOME/.gradle/caches/
   - $HOME/.gradle/wrapper/
 
+script:
+  - ./gradlew buildPlugin
 
 deploy:
   provider: releases
   cleanup: false
   file: "build/distributions/*"
-  script: bash gradlew buildPlugin
   api_key: "$API_KEY"
   on:
-    tags: false
+    tags: false #发布  tag版 时才进行发包
