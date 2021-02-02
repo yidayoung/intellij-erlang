@@ -15,3 +15,13 @@ cache:
 
 script:
   - ./gradlew clean test
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  file: "build/distributions/*"
+  script: ./gradlew buildPlugin
+  api_key:
+    secure: "$API_KEY"
+  on:
+    tags: false
