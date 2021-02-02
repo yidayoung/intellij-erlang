@@ -22,4 +22,4 @@ deploy:
   file: "build/distributions/*"
   api_key: "$API_KEY"
   on:
-    tags: false #发布  tag版 时才进行发包
+    branch: "master"
