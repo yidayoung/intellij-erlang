@@ -21,7 +21,7 @@ branches:
     - master
 
 before_deploy:
-  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')}
+  - export TRAVIS_TAG=latest
 
 deploy:
   provider: releases
