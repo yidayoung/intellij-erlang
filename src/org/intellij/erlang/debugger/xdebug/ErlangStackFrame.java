@@ -68,6 +68,13 @@ public class ErlangStackFrame extends XStackFrame {
       public void evaluate(@NotNull String expression,
                            @NotNull XEvaluationCallback callback,
                            @Nullable XSourcePosition expressionPosition) {
+        for (ErlangVariableBinding binding : myTraceElement.getBindings()){
+          if (binding.getName().equals(expression))
+          {
+            callback.evaluated(ErlangXValueFactory.create(binding.getValue(), "", myDebugProcess.getSession()));
+            return;
+          }
+        }
         myDebugProcess.evaluateExpression(expression, callback, myTraceElement, expressionPosition);
       }
 

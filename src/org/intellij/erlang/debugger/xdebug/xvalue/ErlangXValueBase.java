@@ -126,7 +126,7 @@ class ErlangXValueBase<T extends OtpErlangObject> extends XValue {
             return false;
           }
         }
-        if (e instanceof ErlangFunctionClause || e instanceof ErlangFile)
+        if (e instanceof ErlangFile)
           return false;
         return true;
       });
