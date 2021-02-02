@@ -16,10 +16,9 @@ cache:
 
 deploy:
   provider: releases
-  skip_cleanup: true
+  cleanup: false
   file: "build/distributions/*"
-  script:
-  - ./gradlew buildPlugin
+  script: bash gradlew buildPlugin
   api_key: "$API_KEY"
   on:
     tags: false
