@@ -20,6 +20,6 @@ deploy:
   file: "build/distributions/*"
   script:
   - ./gradlew buildPlugin
-  api_token: "$API_KEY"
+  api_key: "$API_KEY"
   on:
     tags: false
