@@ -13,15 +13,13 @@ cache:
   - $HOME/.gradle/caches/
   - $HOME/.gradle/wrapper/
 
-script:
-  - ./gradlew clean test
 
 deploy:
   provider: releases
   skip_cleanup: true
   file: "build/distributions/*"
-  script: ./gradlew buildPlugin
-  api_key:
-    secure: "$API_KEY"
+  script:
+  - ./gradlew buildPlugin
+  api_token: "$API_KEY"
   on:
     tags: false
