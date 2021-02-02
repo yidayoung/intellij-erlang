@@ -18,7 +18,7 @@ script:
 
 deploy:
   provider: releases
-  cleanup: false
+  skip_cleanup: true
   file: "build/distributions/*"
   api_key: "$API_KEY"
   on:
