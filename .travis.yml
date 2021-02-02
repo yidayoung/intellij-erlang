@@ -16,6 +16,10 @@ cache:
 script:
   - ./gradlew buildPlugin
 
+branches:
+  only:
+    - master
+
 deploy:
   provider: releases
   skip_cleanup: true
