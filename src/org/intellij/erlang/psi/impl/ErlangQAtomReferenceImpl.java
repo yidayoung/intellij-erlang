@@ -107,10 +107,10 @@ public class ErlangQAtomReferenceImpl extends ErlangQAtomBasedReferenceImpl {
       PsiElement directSameResolve = ContainerUtil.find(configKeys, key -> StringUtil.equalsIgnoreWhitespaces(key.getText(), tupleKeyText));
       if (null != directSameResolve) return directSameResolve;
     }
-    String tupleName = ErlangTermFileUtil.getTupleKeyName(tupleExpression);
+    String tupleName = ErlangTermFileUtil.getConfigKeyName(tupleExpression);
     for (PsiElement key : configKeys) {
       if (key instanceof ErlangTupleExpression) {
-        if (StringUtil.equalsIgnoreWhitespaces(tupleName, ErlangTermFileUtil.getTupleKeyName(key)))
+        if (StringUtil.equalsIgnoreWhitespaces(tupleName, ErlangTermFileUtil.getConfigKeyName(key)))
           return key;
       }
     }

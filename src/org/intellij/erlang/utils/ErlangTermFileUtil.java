@@ -21,7 +21,7 @@ import com.intellij.codeInsight.completion.InsertionContext;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.template.Template;
 import com.intellij.codeInsight.template.TemplateManager;
-import com.intellij.codeInsight.template.impl.TextExpression;
+import com.intellij.codeInsight.template.impl.ConstantNode;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -159,8 +159,8 @@ public final class ErlangTermFileUtil {
 
 
   @NotNull
-  public static String getTupleKeyName(PsiElement element) {
-    if (!(element instanceof ErlangTupleExpression)) return "";
+  public static String getConfigKeyName(PsiElement element) {
+    if (!(element instanceof ErlangTupleExpression)) return element.getText();
     ErlangTupleExpression tupleExpression = (ErlangTupleExpression) element;
     List<ErlangExpression> expressionList = tupleExpression.getExpressionList();
     StringBuilder sb = new StringBuilder("{");
@@ -188,11 +188,11 @@ public final class ErlangTermFileUtil {
     private final Project myProject;
     @Nullable
     private Template myTemplate;
-    private String myName;
+    private final String myName;
 
     public KeyInsertHandle(PsiElement key) {
       myProject = key.getProject();
-      myName = key.getText();
+      myName = getConfigKeyName(key);
       myTemplate = null;
       createTemplate(key);
     }
@@ -200,7 +200,6 @@ public final class ErlangTermFileUtil {
 
     @Override
     public void handleInsert(@NotNull InsertionContext context, @NotNull LookupElement item) {
-      super.handleInsert(context, item);
       if (myTemplate != null) {
         Editor editor = context.getEditor();
         String lookupString = item.getLookupString();
@@ -209,59 +208,40 @@ public final class ErlangTermFileUtil {
         editor.getDocument().deleteString(offset - length, offset);
         TemplateManager.getInstance(myProject).startTemplate(editor, myTemplate);
       }
+      else {
+        super.handleInsert(context, item);
+      }
     }
 
     private void createTemplate(PsiElement key) {
-      Project project = key.getProject();
-      TemplateManager templateManager = TemplateManager.getInstance(project);
-      Template template;
       if (key instanceof ErlangTupleExpression){
-        myName = getTupleKeyName(key);
-        template = templateManager.createTemplate("", "", myName);
-        addTupleKeyTemplate(template, (ErlangTupleExpression)key);
+        myTemplate = createTupleKeyTemplate((ErlangTupleExpression)key);
       }
-      template = templateManager.createTemplate("", "");
-      if (key instanceof ErlangConfigExpression){
-        PsiElement firstChild = key.getFirstChild();
-        if (firstChild instanceof ErlangQAtom)
-          return;
-        if (firstChild.getNode().getElementType() == ErlangTypes.ERL_INTEGER)
-          myName = addTemplateVar(template, "KeyInt");
-      }
-      if (key instanceof ErlangStringLiteral)
-        myName = addTemplateVar(template, "KeyStr");
-      template.setToReformat(true);
-      myTemplate = template;
     }
 
-    private static void addTupleKeyTemplate(Template template,
-                                            ErlangTupleExpression tupleExpression) {
-//      template.addTextSegment("{");
-//      StringBuilder sb = new StringBuilder(tupleExpression.getText());
+    private Template createTupleKeyTemplate(ErlangTupleExpression tupleExpression) {
+      TemplateManager templateManager = TemplateManager.getInstance(myProject);
+      Template template = templateManager.createTemplate("", "");
+      template.addTextSegment("{");
       List<ErlangExpression> expressionList = tupleExpression.getExpressionList();
       int varCount = 0;
       int argIndex = 0;
+      int size = expressionList.size();
       for (ErlangExpression expression : expressionList){
+        if (argIndex < size && argIndex > 0) template.addTextSegment(",");
         argIndex++;
         if (expression instanceof ErlangConfigExpression && expression.getFirstChild() instanceof ErlangQAtom){
-//          template.addTextSegment(expression.getText());
+          template.addTextSegment(expression.getText());
           continue;
         }
-        String text = expression.getText();
-        int startOffsetInParent = expression.getStartOffsetInParent();
         String varName = getVarName(varCount);
-//        sb.replace(startOffsetInParent, startOffsetInParent + text.length(), varName);
-        addTemplateVar(template, varName);
+        template.addVariable(new ConstantNode(varName), true);
         varCount++;
-//        if (argIndex < expressionList.size()) template.addTextSegment(",");
       }
-//      template.addTextSegment("}");
-//      return sb.toString();
-    }
-
-    private static String addTemplateVar(Template template, String varName) {
-      template.addVariable(varName, new TextExpression(varName), true);
-      return varName;
+      template.addTextSegment("}");
+      template.addEndVariable();
+      template.setToReformat(true);
+      return template;
     }
 
     public String getName() {

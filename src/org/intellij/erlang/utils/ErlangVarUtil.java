@@ -24,9 +24,9 @@ import com.intellij.codeInsight.template.TemplateManager;
 import com.intellij.codeInsight.template.impl.ConstantNode;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.twelvemonkeys.lang.StringUtil;
 import org.intellij.erlang.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -53,6 +53,11 @@ public class ErlangVarUtil {
     else varName.append(string);
     if (varName.length() > 1)
       varName = new StringBuilder(StringUtil.capitalize(varName.toString()));
+    // like RoleId => RoleID
+    if (StringUtil.endsWith(varName, "Id")) {
+      varName.deleteCharAt(varName.length() - 1);
+      varName.append("D");
+    }
     return varName.toString();
   }
 
@@ -101,7 +106,7 @@ public class ErlangVarUtil {
   }
 
   @Nullable
-  public static String getMapsVarName(ErlangExpression right) {
+  public static String getMapsVarName(@Nullable ErlangExpression right) {
     while (right instanceof ErlangAssignmentExpression){
       right = ((ErlangAssignmentExpression) right).getLeft();
     }
