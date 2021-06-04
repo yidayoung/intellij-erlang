@@ -29,7 +29,7 @@ allprojects {
   }
   patchPluginXml {
     sinceBuild = '193'
-    untilBuild = '203'
+    untilBuild = '211'
   }
 
   def compilationPackages = ['org/intellij/erlang/build/**', 'org/intellij/erlang/jps/**']
