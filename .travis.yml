@@ -29,5 +29,6 @@ deploy:
   file_glob: true
   file: "build/distributions/*"
   api_key: "$API_KEY"
+  overwrite: true
   on:
     branch: "master"
